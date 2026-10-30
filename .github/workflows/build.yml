@@ -1,0 +1,73 @@
+name: Build MAGIC SMART
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: "إنشاء GitHub Release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      VERSION_NAME: 1.0.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build signed release APKs
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_PATH"
+          gradle :app-mobile:assembleRelease :app-tv:assembleRelease \
+            -PversionCodeOverride=${{ github.run_number }} -PversionNameOverride=$VERSION_NAME
+          rm -f "$KEYSTORE_PATH"
+
+      - name: Build debug APKs (no signing secrets)
+        if: env.HAS_KEYSTORE != 'true'
+        run: |
+          gradle :app-mobile:assembleDebug :app-tv:assembleDebug \
+            -PversionCodeOverride=${{ github.run_number }} -PversionNameOverride=$VERSION_NAME
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MagicSmart-Mobile
+          path: app-mobile/build/outputs/apk/**/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MagicSmart-TV
+          path: app-tv/build/outputs/apk/**/*.apk
+
+  release:
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_release }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: apks
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: MAGIC SMART 1.0.${{ github.run_number }}
+          files: apks/**/*.apk
