@@ -1,1 +1,26 @@
-<manifest />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Package Visibility (Android 11+): المسارات والحزم التي يفحصها المحرك فقط -->
+    <queries>
+        <package android:name="com.android.settings" />
+        <package android:name="com.android.tv.settings" />
+        <intent><action android:name="android.settings.APPLICATION_DEVELOPMENT_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.SETTINGS" /></intent>
+        <intent><action android:name="android.settings.DEVICE_INFO_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.WIFI_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.WIRELESS_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.BLUETOOTH_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.APPLICATION_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.MANAGE_ALL_APPLICATIONS_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.SECURITY_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.PRIVACY_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.ACCESSIBILITY_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.DISPLAY_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.SOUND_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.DATE_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.LOCALE_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.INPUT_METHOD_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.INTERNAL_STORAGE_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.CAST_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.BATTERY_SAVER_SETTINGS" /></intent>
+    </queries>
+</manifest>

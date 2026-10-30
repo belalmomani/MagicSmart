@@ -1,0 +1,64 @@
+package com.magicsmart.core.engine
+
+import android.content.ComponentName
+import android.content.Context
+import com.magicsmart.core.DeviceSnapshot
+import com.magicsmart.core.ResultStatus
+
+enum class Engine(val arabic: String) {
+    DEVELOPER_OPTIONS("خيارات المطوّر"),
+    SETTINGS_SCANNER("ماسح الإعدادات"),
+    USB_DEBUGGING("تصحيح USB"),
+    WIRELESS_DEBUGGING("التصحيح اللاسلكي"),
+    ADB("محلل ADB"),
+    ADVANCED_PERMISSIONS("الصلاحيات المتقدمة"),
+    OEM("محلل الشركات"),
+    ANDROID_TV("محلل Android TV")
+}
+
+enum class DeviceTarget { ANY, PHONE, TV }
+
+/** وصف مسار قابل للفتح بمبادرة المستخدم. */
+class LaunchSpec(val action: String? = null, val component: ComponentName? = null)
+
+class TestContext(val context: Context, val snapshot: DeviceSnapshot)
+
+class TestOutcome(
+    val status: ResultStatus,
+    val actual: String,
+    val failureReason: String? = null,
+    val nextAction: String? = null
+)
+
+/** تعريف اختبار مستقل؛ إضافة اختبار جديد = إضافة كائن جديد إلى قائمة محرك ما. */
+class TestDefinition(
+    val id: String,
+    val name: String,
+    val description: String,
+    val engine: Engine,
+    val method: String,
+    val expected: String,
+    val minApi: Int = 1,
+    val maxApi: Int = Int.MAX_VALUE,
+    val target: DeviceTarget = DeviceTarget.ANY,
+    val requiredPermissions: List<String> = emptyList(),
+    val launch: LaunchSpec? = null,
+    val run: (TestContext) -> TestOutcome
+) {
+    fun appliesTo(s: DeviceSnapshot): Boolean =
+        s.sdkInt in minApi..maxApi && when (target) {
+            DeviceTarget.ANY -> true
+            DeviceTarget.TV -> s.isTv
+            DeviceTarget.PHONE -> !s.isTv
+        }
+}
+
+class TestResult(
+    val definition: TestDefinition,
+    val status: ResultStatus,
+    val actual: String,
+    val failureReason: String?,
+    val nextAction: String?,
+    val durationMs: Long,
+    val finishedAtMillis: Long
+)

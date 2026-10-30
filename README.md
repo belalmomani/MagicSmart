@@ -8,3 +8,7 @@
 
 ## البناء محلياً
 لا يتضمن المستودع gradle-wrapper.jar؛ نفّذ `gradle wrapper --gradle-version 8.9` مرة واحدة أو اعتمد على GitHub Actions.
+
+## المرحلة 2
+`core/engine`: TestEngine (تشغيل/إيقاف/استكمال/إعادة الفاشل) · Developer Options Discovery · Settings Scanner · Android TV Analyzer.
+إضافة اختبار جديد = إضافة `TestDefinition` إلى قائمة المحرك المناسب. مسارات الإعدادات تُولَّد من قائمة واحدة (`SettingsActions.kt`) مطابقة لـ `<queries>` في manifest الوحدة `core`.
