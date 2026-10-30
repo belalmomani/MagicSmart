@@ -52,7 +52,8 @@ private fun HomeScreen(controller: ScanController, onOpenResults: () -> Unit) {
     val results by controller.results.collectAsState()
     val running by controller.running.collectAsState()
     val planned = controller.planned()
-    val done = results.size
+    // اختبارات الموافقة تُحسب منفصلة عن الاختبارات التلقائية المخطَّطة
+    val done = results.count { !it.definition.requiresConsent }
     var pending by remember { mutableStateOf<TestDefinition?>(null) }
     pending?.let { t ->
         AlertDialog(

@@ -42,7 +42,8 @@ object DeviceInspector {
             val v = Settings.Global.getInt(resolver, key)
             SettingReading(if (v == 1) SettingState.ENABLED else SettingState.DISABLED)
         } catch (e: Settings.SettingNotFoundException) {
-            SettingReading(SettingState.UNREADABLE, "الإعداد غير موجود في هذا النظام")
+            // نفس منطق تطبيق الإعدادات: الغياب يُقرأ بقيمة افتراضية 0 (معطّل) في إصدارات user
+            SettingReading(SettingState.DISABLED, "القيمة غير مخزَّنة؛ النظام يعاملها كمعطّلة (الافتراضي 0)")
         } catch (e: SecurityException) {
             SettingReading(SettingState.UNREADABLE, "النظام منع القراءة")
         }
