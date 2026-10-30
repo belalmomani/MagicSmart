@@ -1,8 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- قراءة حالة الشبكة لتحديد اتصال Wi-Fi (صلاحية عادية، لا بيانات شخصية) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- اكتشاف خدمات ADB عبر mDNS واختبار منفذ محلي؛ لا يُرسل التطبيق أي بيانات خارج الجهاز -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Package Visibility (Android 11+): المسارات والحزم التي يفحصها المحرك فقط -->
     <queries>
         <package android:name="com.android.settings" />
         <package android:name="com.android.tv.settings" />
+        <package android:name="moe.shizuku.privileged.api" />
         <intent><action android:name="android.settings.APPLICATION_DEVELOPMENT_SETTINGS" /></intent>
         <intent><action android:name="android.settings.SETTINGS" /></intent>
         <intent><action android:name="android.settings.DEVICE_INFO_SETTINGS" /></intent>

@@ -29,6 +29,7 @@ import com.magicsmart.core.SettingState
 import com.magicsmart.core.engine.Engine
 import com.magicsmart.core.engine.Launcher
 import com.magicsmart.core.engine.ScanController
+import com.magicsmart.core.engine.TestDefinition
 import com.magicsmart.core.engine.TestResult
 
 private enum class Screen { HOME, RESULTS }
@@ -61,6 +62,31 @@ private fun HomeScreen(controller: ScanController, onOpenResults: () -> Unit) {
     val done = results.size
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(running) { snap = DeviceInspector.inspect(context) }
+    var listOpen by remember { mutableStateOf(false) }
+    var pending by remember { mutableStateOf<TestDefinition?>(null) }
+    val consentTests = controller.consentTests().filter { t -> results.none { it.definition.id == t.id } }
+    if (listOpen) {
+        AlertDialog(
+            onDismissRequest = { listOpen = false },
+            title = { Text("اختبارات تتطلب موافقتك") },
+            text = {
+                Column {
+                    consentTests.forEach { t -> TextButton(onClick = { pending = t; listOpen = false }) { Text(t.name, fontSize = 20.sp) } }
+                }
+            },
+            confirmButton = { TextButton(onClick = { listOpen = false }) { Text("إغلاق") } }
+        )
+    }
+    pending?.let { t ->
+        AlertDialog(
+            onDismissRequest = { pending = null },
+            title = { Text("موافقة مطلوبة") },
+            text = { Text("سيُنفَّذ الاختبار «${t.name}»:\n${t.description}\n\nلن يُغيَّر أي إعداد. هل توافق؟") },
+            confirmButton = { TextButton(onClick = { controller.runConsented(t.id); pending = null }) { Text("أوافق وأنفّذ") } },
+            dismissButton = { TextButton(onClick = { pending = null }) { Text("إلغاء") } }
+        )
+    }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 27.dp)) {
         Text("MAGIC SMART TV", fontSize = 36.sp, fontWeight = FontWeight.Bold)
@@ -100,7 +126,7 @@ private fun HomeScreen(controller: ScanController, onOpenResults: () -> Unit) {
             }
             FocusButton("النتائج") { if (done > 0) onOpenResults() }
             FocusButton("إعادة اختبار الفاشل") { controller.rerunFailed() }
-            FocusButton("تحديث المعلومات") { snap = DeviceInspector.inspect(context) }
+            if (consentTests.isNotEmpty()) FocusButton("اختبارات بموافقتي (${consentTests.size})") { listOpen = true }
         }
     }
 }
@@ -141,7 +167,7 @@ private fun ResultRow(r: TestResult) {
             .border(if (focused) 4.dp else 1.dp, if (focused) Color.White else Color(0xFF333333), shape)
             .clickable {
                 r.definition.launch?.let {
-                    Toast.makeText(context, Launcher.launch(context, it).actual, Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, ScanController.get(context).launch(context, it).actual, Toast.LENGTH_LONG).show()
                 }
             }
             .padding(16.dp),
@@ -182,8 +208,8 @@ private fun StatusRow(title: String, r: SettingReading) {
 private fun FocusButton(
     text: String,
     modifier: Modifier = Modifier,
-    fontSize: TextUnit = 24.sp,
-    height: androidx.compose.ui.unit.Dp = 64.dp,
+    fontSize: TextUnit = 20.sp,
+    height: androidx.compose.ui.unit.Dp = 56.dp,
     onClick: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }

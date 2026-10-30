@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import com.magicsmart.core.DeviceSnapshot
 import com.magicsmart.core.ResultStatus
+import java.util.concurrent.ConcurrentHashMap
 
 enum class Engine(val arabic: String) {
     DEVELOPER_OPTIONS("خيارات المطوّر"),
@@ -21,7 +22,13 @@ enum class DeviceTarget { ANY, PHONE, TV }
 /** وصف مسار قابل للفتح بمبادرة المستخدم. */
 class LaunchSpec(val action: String? = null, val component: ComponentName? = null)
 
-class TestContext(val context: Context, val snapshot: DeviceSnapshot)
+class TestContext(val context: Context, val snapshot: DeviceSnapshot) {
+    private val cache = ConcurrentHashMap<String, Any>()
+
+    /** يتيح مشاركة نتيجة فحص مكلف (مثل اكتشاف mDNS) بين عدة اختبارات في الدورة نفسها. */
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Any> cached(key: String, compute: () -> T): T = cache.getOrPut(key, compute) as T
+}
 
 class TestOutcome(
     val status: ResultStatus,
@@ -43,6 +50,8 @@ class TestDefinition(
     val target: DeviceTarget = DeviceTarget.ANY,
     val requiredPermissions: List<String> = emptyList(),
     val launch: LaunchSpec? = null,
+    /** اختبار لا يُنفَّذ تلقائياً؛ يُنفَّذ فقط بعد موافقة صريحة من المستخدم. */
+    val requiresConsent: Boolean = false,
     val run: (TestContext) -> TestOutcome
 ) {
     fun appliesTo(s: DeviceSnapshot): Boolean =

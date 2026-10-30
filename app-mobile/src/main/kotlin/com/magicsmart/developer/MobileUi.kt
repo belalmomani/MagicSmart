@@ -23,6 +23,7 @@ import com.magicsmart.core.SettingState
 import com.magicsmart.core.engine.Engine
 import com.magicsmart.core.engine.Launcher
 import com.magicsmart.core.engine.ScanController
+import com.magicsmart.core.engine.TestDefinition
 import com.magicsmart.core.engine.TestResult
 
 private enum class Screen { HOME, RESULTS }
@@ -52,6 +53,17 @@ private fun HomeScreen(controller: ScanController, onOpenResults: () -> Unit) {
     val running by controller.running.collectAsState()
     val planned = controller.planned()
     val done = results.size
+    var pending by remember { mutableStateOf<TestDefinition?>(null) }
+    pending?.let { t ->
+        AlertDialog(
+            onDismissRequest = { pending = null },
+            title = { Text("موافقة مطلوبة") },
+            text = { Text("سيُنفَّذ الاختبار «${t.name}»:\n${t.description}\n\nلن يُغيَّر أي إعداد. هل توافق؟") },
+            confirmButton = { TextButton(onClick = { controller.runConsented(t.id); pending = null }) { Text("أوافق وأنفّذ") } },
+            dismissButton = { TextButton(onClick = { pending = null }) { Text("إلغاء") } }
+        )
+    }
+    val consentTests = controller.consentTests().filter { t -> results.none { it.definition.id == t.id } }
 
     Scaffold(topBar = {
         CenterAlignedTopAppBar(title = { Text("MAGIC SMART", fontWeight = FontWeight.Bold) })
@@ -118,6 +130,18 @@ private fun HomeScreen(controller: ScanController, onOpenResults: () -> Unit) {
                     }
                 }
             }
+            if (consentTests.isNotEmpty()) item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("اختبارات تتطلب موافقتك", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        consentTests.forEach { t ->
+                            Text(t.name, fontWeight = FontWeight.Bold)
+                            Text(t.description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            OutlinedButton(onClick = { pending = t }, modifier = Modifier.fillMaxWidth()) { Text("تشغيل بموافقتي") }
+                        }
+                    }
+                }
+            }
             item {
                 TextButton(
                     onClick = { snap = DeviceInspector.inspect(context) },
@@ -181,7 +205,7 @@ private fun ResultCard(r: TestResult) {
             val spec = r.definition.launch
             if (spec != null && (r.status == ResultStatus.SUCCESS || r.status == ResultStatus.USER_ACTION_REQUIRED)) {
                 OutlinedButton(onClick = {
-                    Toast.makeText(context, Launcher.launch(context, spec).actual, Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, ScanController.get(context).launch(context, spec).actual, Toast.LENGTH_LONG).show()
                 }) { Text("فتح الصفحة") }
             }
         }
