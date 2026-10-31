@@ -1,0 +1,20 @@
+{
+  "manufacturers": [
+    "GDYM"
+  ],
+  "brands": [
+    "MAGIC",
+    "MAGIC SMART"
+  ],
+  "model_regex": "",
+  "hardware_regex": "",
+  "tv_only": false,
+  "min_api": 1,
+  "max_api": 999,
+  "packages": [],
+  "components": [],
+  "actions": [],
+  "id": "magic_smart",
+  "name": "MAGIC SMART (GDYM)",
+  "notes": "جهاز المستخدم: الشركة GDYM والموديل SMART_TV على Android 14. يُثرى هذا الملف من نتائج الفحص الفعلية."
+}

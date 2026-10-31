@@ -1,0 +1,29 @@
+# معرف|مسار الإعدادات|الاسم  — أضف سطراً ثم شغّل: python3 tools/sync_queries.py
+SET-001|android.settings.SETTINGS|الإعدادات العامة
+SET-002|android.settings.DEVICE_INFO_SETTINGS|معلومات الجهاز
+SET-003|android.settings.WIFI_SETTINGS|الواي فاي
+SET-004|android.settings.WIRELESS_SETTINGS|الشبكات اللاسلكية
+SET-005|android.settings.BLUETOOTH_SETTINGS|البلوتوث
+SET-006|android.settings.APPLICATION_SETTINGS|التطبيقات
+SET-007|android.settings.MANAGE_ALL_APPLICATIONS_SETTINGS|كل التطبيقات
+SET-008|android.settings.SECURITY_SETTINGS|الأمان
+SET-009|android.settings.PRIVACY_SETTINGS|الخصوصية
+SET-010|android.settings.ACCESSIBILITY_SETTINGS|سهولة الاستخدام
+SET-011|android.settings.DISPLAY_SETTINGS|العرض
+SET-012|android.settings.SOUND_SETTINGS|الصوت
+SET-013|android.settings.DATE_SETTINGS|التاريخ والوقت
+SET-014|android.settings.LOCALE_SETTINGS|اللغة
+SET-015|android.settings.INPUT_METHOD_SETTINGS|لوحات الإدخال
+SET-016|android.settings.INTERNAL_STORAGE_SETTINGS|التخزين
+SET-017|android.settings.CAST_SETTINGS|البث
+SET-018|android.settings.BATTERY_SAVER_SETTINGS|توفير الطاقة
+SET-019|android.settings.HOME_SETTINGS|التطبيق الرئيسي الافتراضي
+SET-020|android.settings.NOTIFICATION_LISTENER_SETTINGS|مستمعو الإشعارات
+SET-021|android.settings.VOICE_INPUT_SETTINGS|الإدخال الصوتي
+SET-022|android.settings.CAPTIONING_SETTINGS|الترجمة النصية
+SET-023|android.settings.NFC_SETTINGS|NFC
+SET-024|android.settings.DATA_ROAMING_SETTINGS|التجوال
+SET-025|android.settings.MEMORY_CARD_SETTINGS|بطاقة الذاكرة
+SET-026|android.settings.SYNC_SETTINGS|المزامنة
+SET-027|android.settings.ADD_ACCOUNT_SETTINGS|إضافة حساب
+SET-028|android.settings.NETWORK_OPERATOR_SETTINGS|مشغّل الشبكة

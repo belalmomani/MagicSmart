@@ -1,0 +1,18 @@
+{
+  "manufacturers": [],
+  "brands": [],
+  "model_regex": "",
+  "hardware_regex": "",
+  "tv_only": false,
+  "min_api": 1,
+  "max_api": 999,
+  "packages": [
+    "com.android.settings",
+    "com.android.tv.settings"
+  ],
+  "components": [],
+  "actions": [],
+  "id": "generic",
+  "name": "ملف عام (AOSP)",
+  "notes": "يُستخدم عند عدم وجود ملف مطابق. المسارات القياسية تُفحص في محركات المطوّر والإعدادات."
+}

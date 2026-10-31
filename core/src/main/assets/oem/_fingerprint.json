@@ -1,0 +1,16 @@
+{
+  "packages": [
+    "com.google.android.tvlauncher",
+    "com.google.android.apps.tv.launcherx",
+    "com.google.android.leanbacklauncher",
+    "com.google.android.katniss",
+    "com.google.android.tvrecommendations",
+    "com.google.android.tv.remote.service",
+    "com.android.tv.settings",
+    "com.android.settings",
+    "com.google.android.gms",
+    "com.android.vending",
+    "com.android.launcher3",
+    "com.droidlogic.tv.settings"
+  ]
+}

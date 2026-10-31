@@ -1,6 +1,6 @@
 package com.magicsmart.core.engine
 
-// ملف مُولَّد من قائمة المسارات نفسها المصرَّح بها في <queries> داخل AndroidManifest.
+// ملف مُولَّد بواسطة tools/sync_queries.py — لا تعدّله يدوياً.
 internal class SettingsAction(val id: String, val action: String, val title: String)
 
 internal val SETTINGS_ACTIONS = listOf(
@@ -22,4 +22,14 @@ internal val SETTINGS_ACTIONS = listOf(
     SettingsAction("SET-016", "android.settings.INTERNAL_STORAGE_SETTINGS", "التخزين"),
     SettingsAction("SET-017", "android.settings.CAST_SETTINGS", "البث"),
     SettingsAction("SET-018", "android.settings.BATTERY_SAVER_SETTINGS", "توفير الطاقة"),
+    SettingsAction("SET-019", "android.settings.HOME_SETTINGS", "التطبيق الرئيسي الافتراضي"),
+    SettingsAction("SET-020", "android.settings.NOTIFICATION_LISTENER_SETTINGS", "مستمعو الإشعارات"),
+    SettingsAction("SET-021", "android.settings.VOICE_INPUT_SETTINGS", "الإدخال الصوتي"),
+    SettingsAction("SET-022", "android.settings.CAPTIONING_SETTINGS", "الترجمة النصية"),
+    SettingsAction("SET-023", "android.settings.NFC_SETTINGS", "NFC"),
+    SettingsAction("SET-024", "android.settings.DATA_ROAMING_SETTINGS", "التجوال"),
+    SettingsAction("SET-025", "android.settings.MEMORY_CARD_SETTINGS", "بطاقة الذاكرة"),
+    SettingsAction("SET-026", "android.settings.SYNC_SETTINGS", "المزامنة"),
+    SettingsAction("SET-027", "android.settings.ADD_ACCOUNT_SETTINGS", "إضافة حساب"),
+    SettingsAction("SET-028", "android.settings.NETWORK_OPERATOR_SETTINGS", "مشغّل الشبكة"),
 )

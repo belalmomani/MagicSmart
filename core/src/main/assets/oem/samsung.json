@@ -1,0 +1,19 @@
+{
+  "manufacturers": [
+    "samsung"
+  ],
+  "brands": [],
+  "model_regex": "",
+  "hardware_regex": "",
+  "tv_only": false,
+  "min_api": 1,
+  "max_api": 999,
+  "packages": [
+    "com.sec.android.app.launcher"
+  ],
+  "components": [],
+  "actions": [],
+  "id": "samsung",
+  "name": "Samsung (Android)",
+  "notes": "ملف أولي. تلفزيونات Samsung الذكية الأحدث تعمل بنظام Tizen وليس Android."
+}

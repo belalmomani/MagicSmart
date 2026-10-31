@@ -19,5 +19,10 @@ data class DeviceSnapshot(
     val isTv: Boolean,
     val developerOptions: SettingReading,
     val usbDebugging: SettingReading,
-    val wirelessDebugging: SettingReading
+    val wirelessDebugging: SettingReading,
+    val hardware: String = "",
+    val board: String = "",
+    val product: String = "",
+    val buildDisplay: String = "",
+    val buildFingerprint: String = ""
 )

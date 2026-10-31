@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.UserManager
 import java.net.Inet4Address
+import java.net.NetworkInterface
 
 internal object Env {
     fun debugRestricted(ctx: Context): Boolean {
@@ -30,4 +31,12 @@ internal object Env {
             ?.firstOrNull { it is Inet4Address }?.hostAddress
         return true to ip
     }
+
+    /** أول عنوان IPv4 محلي (Wi-Fi أو Ethernet) لعرضه على الشاشة؛ لا يُرسل لأي جهة. */
+    fun localIpv4(): String? = try {
+        NetworkInterface.getNetworkInterfaces().toList()
+            .filter { it.isUp && !it.isLoopback }
+            .flatMap { it.inetAddresses.toList() }
+            .firstOrNull { it is Inet4Address && it.isSiteLocalAddress }?.hostAddress
+    } catch (e: Exception) { null }
 }

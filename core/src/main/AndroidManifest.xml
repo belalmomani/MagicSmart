@@ -1,31 +1,55 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ملف مُولَّد بواسطة tools/sync_queries.py — لا تعدّله يدوياً. -->
     <!-- قراءة حالة الشبكة لتحديد اتصال Wi-Fi (صلاحية عادية، لا بيانات شخصية) -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- اكتشاف خدمات ADB عبر mDNS واختبار منفذ محلي؛ لا يُرسل التطبيق أي بيانات خارج الجهاز -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Package Visibility (Android 11+): المسارات والحزم التي يفحصها المحرك فقط -->
+    <!-- Package Visibility (Android 11+): الحزم والمسارات التي يفحصها المحرك فقط -->
     <queries>
+        <package android:name="com.android.launcher3" />
         <package android:name="com.android.settings" />
         <package android:name="com.android.tv.settings" />
+        <package android:name="com.android.vending" />
+        <package android:name="com.droidlogic.tv.settings" />
+        <package android:name="com.google.android.apps.tv.launcherx" />
+        <package android:name="com.google.android.gms" />
+        <package android:name="com.google.android.katniss" />
+        <package android:name="com.google.android.leanbacklauncher" />
+        <package android:name="com.google.android.tv.remote.service" />
+        <package android:name="com.google.android.tvlauncher" />
+        <package android:name="com.google.android.tvrecommendations" />
+        <package android:name="com.miui.securitycenter" />
+        <package android:name="com.sec.android.app.launcher" />
+        <package android:name="com.xiaomi.mitv.settings" />
         <package android:name="moe.shizuku.privileged.api" />
-        <intent><action android:name="android.settings.APPLICATION_DEVELOPMENT_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.SETTINGS" /></intent>
-        <intent><action android:name="android.settings.DEVICE_INFO_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.WIFI_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.WIRELESS_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.BLUETOOTH_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.APPLICATION_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.MANAGE_ALL_APPLICATIONS_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.SECURITY_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.PRIVACY_SETTINGS" /></intent>
         <intent><action android:name="android.settings.ACCESSIBILITY_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.DISPLAY_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.SOUND_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.ADD_ACCOUNT_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.APPLICATION_DEVELOPMENT_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.APPLICATION_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.BATTERY_SAVER_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.BLUETOOTH_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.CAPTIONING_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.CAST_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.DATA_ROAMING_SETTINGS" /></intent>
         <intent><action android:name="android.settings.DATE_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.LOCALE_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.DEVICE_INFO_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.DISPLAY_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.HOME_SETTINGS" /></intent>
         <intent><action android:name="android.settings.INPUT_METHOD_SETTINGS" /></intent>
         <intent><action android:name="android.settings.INTERNAL_STORAGE_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.CAST_SETTINGS" /></intent>
-        <intent><action android:name="android.settings.BATTERY_SAVER_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.LOCALE_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.MANAGE_ALL_APPLICATIONS_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.MEMORY_CARD_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.NETWORK_OPERATOR_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.NFC_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.NOTIFICATION_LISTENER_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.PRIVACY_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.SECURITY_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.SETTINGS" /></intent>
+        <intent><action android:name="android.settings.SOUND_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.SYNC_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.VOICE_INPUT_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.WIFI_SETTINGS" /></intent>
+        <intent><action android:name="android.settings.WIRELESS_SETTINGS" /></intent>
     </queries>
 </manifest>

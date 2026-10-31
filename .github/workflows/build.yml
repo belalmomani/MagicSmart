@@ -26,6 +26,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Sync manifest queries and generated sources
+        run: python3 tools/sync_queries.py
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"

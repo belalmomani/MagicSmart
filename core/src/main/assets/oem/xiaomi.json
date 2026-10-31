@@ -1,0 +1,25 @@
+{
+  "manufacturers": [
+    "Xiaomi"
+  ],
+  "brands": [
+    "Xiaomi",
+    "Redmi",
+    "POCO",
+    "Mi"
+  ],
+  "model_regex": "",
+  "hardware_regex": "",
+  "tv_only": false,
+  "min_api": 1,
+  "max_api": 999,
+  "packages": [
+    "com.xiaomi.mitv.settings",
+    "com.miui.securitycenter"
+  ],
+  "components": [],
+  "actions": [],
+  "id": "xiaomi",
+  "name": "Xiaomi / Mi TV",
+  "notes": "ملف أولي: أسماء الحزم مرشّحة وغير مؤكدة، وغيابها نتيجة صالحة."
+}

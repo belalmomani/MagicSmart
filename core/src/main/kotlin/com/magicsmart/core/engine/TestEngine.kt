@@ -8,10 +8,10 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
 object TestRegistry {
-    fun all(): List<TestDefinition> = (
+    fun all(context: android.content.Context): List<TestDefinition> = (
         DeveloperOptionsTests.all + SettingsScannerTests.all + AndroidTvTests.all +
             UsbDebuggingTests.all + WirelessDebuggingTests.all + AdbAnalyzerTests.all +
-            AdvancedPermissionsTests.all
+            AdvancedPermissionsTests.all + OemTests.build(context)
         ).distinctBy { it.id }
 }
 

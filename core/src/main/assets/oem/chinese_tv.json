@@ -1,0 +1,17 @@
+{
+  "manufacturers": [],
+  "brands": [],
+  "model_regex": "",
+  "hardware_regex": "(?i)(amlogic|\\bmt\\d|mediatek|rk3|rockchip|sunxi|allwinner|hi3|hisilicon|realtek|rtd)",
+  "tv_only": true,
+  "min_api": 1,
+  "max_api": 999,
+  "packages": [
+    "com.droidlogic.tv.settings"
+  ],
+  "components": [],
+  "actions": [],
+  "id": "chinese_tv",
+  "name": "تلفاز بعتاد صيني (Amlogic/Mediatek/Rockchip…)",
+  "notes": "مطابقة بحسب اسم العتاد واللوحة. واجهة النظام قد تكون معدّلة."
+}

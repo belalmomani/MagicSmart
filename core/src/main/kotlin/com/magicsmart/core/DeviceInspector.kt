@@ -33,7 +33,12 @@ object DeviceInspector {
             isTv = isTv,
             developerOptions = readGlobal(resolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED),
             usbDebugging = readGlobal(resolver, Settings.Global.ADB_ENABLED),
-            wirelessDebugging = wireless
+            wirelessDebugging = wireless,
+            hardware = Build.HARDWARE.orEmpty(),
+            board = Build.BOARD.orEmpty(),
+            product = Build.PRODUCT.orEmpty(),
+            buildDisplay = Build.DISPLAY.orEmpty(),
+            buildFingerprint = Build.FINGERPRINT.orEmpty()
         )
     }
 

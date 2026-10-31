@@ -1,0 +1,20 @@
+{
+  "manufacturers": [
+    "TCL"
+  ],
+  "brands": [
+    "TCL",
+    "Alcatel"
+  ],
+  "model_regex": "",
+  "hardware_regex": "",
+  "tv_only": false,
+  "min_api": 1,
+  "max_api": 999,
+  "packages": [],
+  "components": [],
+  "actions": [],
+  "id": "tcl",
+  "name": "TCL",
+  "notes": "ملف أولي بلا مسارات خاصة بعد؛ يُثرى من نتائج الأجهزة."
+}

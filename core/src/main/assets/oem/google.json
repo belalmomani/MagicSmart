@@ -1,0 +1,22 @@
+{
+  "manufacturers": [
+    "Google"
+  ],
+  "brands": [
+    "google"
+  ],
+  "model_regex": "",
+  "hardware_regex": "",
+  "tv_only": false,
+  "min_api": 1,
+  "max_api": 999,
+  "packages": [
+    "com.google.android.tvlauncher",
+    "com.google.android.apps.tv.launcherx"
+  ],
+  "components": [],
+  "actions": [],
+  "id": "google",
+  "name": "Google / Android TV أصلي",
+  "notes": "ملف أولي يحتاج إثراءً من نتائج أجهزة حقيقية."
+}

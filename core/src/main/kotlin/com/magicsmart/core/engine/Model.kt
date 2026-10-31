@@ -51,11 +51,13 @@ class TestDefinition(
     val requiredPermissions: List<String> = emptyList(),
     val launch: LaunchSpec? = null,
     /** اختبار لا يُنفَّذ تلقائياً؛ يُنفَّذ فقط بعد موافقة صريحة من المستخدم. */
+    /** شرط إضافي لانطباق الاختبار (مثل مطابقة ملف OEM). */
+    val condition: (DeviceSnapshot) -> Boolean = { true },
     val requiresConsent: Boolean = false,
     val run: (TestContext) -> TestOutcome
 ) {
     fun appliesTo(s: DeviceSnapshot): Boolean =
-        s.sdkInt in minApi..maxApi && when (target) {
+        condition(s) && s.sdkInt in minApi..maxApi && when (target) {
             DeviceTarget.ANY -> true
             DeviceTarget.TV -> s.isTv
             DeviceTarget.PHONE -> !s.isTv
