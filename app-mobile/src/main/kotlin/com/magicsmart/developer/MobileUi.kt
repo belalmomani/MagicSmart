@@ -4,7 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,7 +41,7 @@ private enum class Screen { HOME, RESULTS, REPORTS, LINK }
 
 @Composable
 fun MagicMobileApp() {
-    MaterialTheme(colorScheme = darkColorScheme(primary = Color(0xFF7C4DFF))) {
+    MaterialTheme(colorScheme = magicColors()) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             val context = LocalContext.current
             val controller = remember { ScanController.get(context) }
@@ -103,7 +106,7 @@ private fun HomeScreen(controller: ScanController, onOpenResults: (Engine?) -> U
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("الاختبارات", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("نُفذ $done من $planned اختباراً")
+                        Text(if (running) "جارٍ الفحص: $done / $planned" else "نُفذ $done من $planned اختباراً")
                         LinearProgressIndicator(
                             progress = { if (planned == 0) 0f else (done.toFloat() / planned).coerceAtMost(1f) },
                             modifier = Modifier.fillMaxWidth()
@@ -357,7 +360,10 @@ private fun StatusCard(title: String, reading: SettingReading) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(reading.state.arabic, color = stateColor(reading.state), fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.size(10.dp).background(stateColor(reading.state), CircleShape))
+                Text(reading.state.arabic, color = stateColor(reading.state), fontWeight = FontWeight.Bold)
+            }
             reading.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color.Gray) }
         }
     }
@@ -499,3 +505,11 @@ private fun LinkScreen(onBack: () -> Unit) {
         }
     }
 }
+
+private fun magicColors() = darkColorScheme(
+    primary = Color(0xFF8E6BFF), onPrimary = Color.White,
+    secondary = Color(0xFF4DD0C4),
+    background = Color(0xFF0F1115), surface = Color(0xFF0F1115),
+    surfaceVariant = Color(0xFF1C2029), surfaceContainerHighest = Color(0xFF1C2029),
+    error = Color(0xFFEF5350)
+)

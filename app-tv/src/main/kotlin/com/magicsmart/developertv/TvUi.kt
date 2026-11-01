@@ -2,7 +2,10 @@ package com.magicsmart.developertv
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,7 +45,7 @@ private enum class Screen { HOME, RESULTS, REPORTS, LINK }
 
 @Composable
 fun MagicTvApp() {
-    MaterialTheme(colorScheme = darkColorScheme(primary = Color(0xFF7C4DFF))) {
+    MaterialTheme(colorScheme = magicColors()) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             val context = LocalContext.current
             val controller = remember { ScanController.get(context) }
@@ -115,7 +118,11 @@ private fun HomeScreen(controller: ScanController, onOpenResults: () -> Unit, on
                 StatusRow("تصحيح USB", snap.usbDebugging)
                 StatusRow("التصحيح اللاسلكي", snap.wirelessDebugging)
                 Spacer(Modifier.height(4.dp))
-                Text("نُفذ $done من $planned اختباراً", fontSize = 22.sp, color = Color(0xFFB39DDB))
+                Text(if (running) "جارٍ الفحص: $done / $planned" else "نُفذ $done من $planned اختباراً", fontSize = 22.sp, color = Color(0xFFB39DDB))
+                LinearProgressIndicator(
+                    progress = { if (planned == 0) 0f else (done.toFloat() / planned).coerceAtMost(1f) },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -282,7 +289,10 @@ private fun InfoRow(k: String, v: String) {
 private fun StatusRow(title: String, r: SettingReading) {
     Column {
         Text(title, fontSize = 18.sp, color = Color.Gray)
-        Text(r.state.arabic, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = stateColor(r.state))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(14.dp).background(stateColor(r.state), CircleShape))
+            Text(r.state.arabic, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = stateColor(r.state))
+        }
         r.note?.let { Text(it, fontSize = 16.sp, color = Color.Gray) }
     }
 }
@@ -380,3 +390,11 @@ private fun LinkScreen(onBack: () -> Unit) {
         }
     }
 }
+
+private fun magicColors() = darkColorScheme(
+    primary = Color(0xFF8E6BFF), onPrimary = Color.White,
+    secondary = Color(0xFF4DD0C4),
+    background = Color(0xFF0F1115), surface = Color(0xFF0F1115),
+    surfaceVariant = Color(0xFF1C2029), surfaceContainerHighest = Color(0xFF1C2029),
+    error = Color(0xFFEF5350)
+)

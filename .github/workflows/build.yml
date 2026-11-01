@@ -19,15 +19,26 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HAS_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
-      VERSION_NAME: 1.0.${{ github.run_number }}
+    outputs:
+      version: ${{ steps.ver.outputs.name }}
+      signed: ${{ env.HAS_KEYSTORE }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Compute version (MAJOR.MINOR from version.properties + run number)
+        id: ver
+        run: |
+          . ./version.properties
+          echo "name=${VERSION_MAJOR}.${VERSION_MINOR}.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
       - name: Sync manifest queries and generated sources
         run: python3 tools/sync_queries.py
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -42,23 +53,61 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_PATH"
           gradle :app-mobile:assembleRelease :app-tv:assembleRelease \
-            -PversionCodeOverride=${{ github.run_number }} -PversionNameOverride=$VERSION_NAME
+            -PversionCodeOverride=${{ github.run_number }} -PversionNameOverride=${{ steps.ver.outputs.name }}
           rm -f "$KEYSTORE_PATH"
 
       - name: Build debug APKs (no signing secrets)
         if: env.HAS_KEYSTORE != 'true'
         run: |
           gradle :app-mobile:assembleDebug :app-tv:assembleDebug \
-            -PversionCodeOverride=${{ github.run_number }} -PversionNameOverride=$VERSION_NAME
+            -PversionCodeOverride=${{ github.run_number }} -PversionNameOverride=${{ steps.ver.outputs.name }}
+
+      - name: Collect APKs with clear names and checksums
+        run: |
+          mkdir -p dist
+          V=${{ steps.ver.outputs.name }}
+          for app in mobile:Mobile tv:TV; do
+            dir="app-${app%%:*}"; label="${app##*:}"
+            for apk in $(find "$dir/build/outputs/apk" -name '*.apk'); do
+              variant=$(basename "$(dirname "$apk")")
+              cp "$apk" "dist/MagicSmart-$label-$V-$variant.apk"
+            done
+          done
+          (cd dist && sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
       - uses: actions/upload-artifact@v4
         with:
           name: MagicSmart-Mobile
-          path: app-mobile/build/outputs/apk/**/*.apk
+          path: dist/MagicSmart-Mobile-*.apk
       - uses: actions/upload-artifact@v4
         with:
           name: MagicSmart-TV
-          path: app-tv/build/outputs/apk/**/*.apk
+          path: dist/MagicSmart-TV-*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SHA256SUMS
+          path: dist/SHA256SUMS.txt
+
+  unit-tests:
+    # مستقل ولا يمنع إنتاج الـ APK؛ يظهر فشله في تبويب Actions فقط
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: python3 tools/sync_queries.py
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - run: gradle :core:testDebugUnitTest
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: unit-test-reports
+          path: core/build/reports/tests/
 
   release:
     needs: build
@@ -70,6 +119,13 @@ jobs:
           path: apks
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: MAGIC SMART 1.0.${{ github.run_number }}
-          files: apks/**/*.apk
+          tag_name: v${{ needs.build.outputs.version }}
+          name: MAGIC SMART ${{ needs.build.outputs.version }}
+          prerelease: ${{ needs.build.outputs.signed != 'true' }}
+          body: |
+            تطبيقان مستقلان: MagicSmart-Mobile (com.magicsmart.developer) و MagicSmart-TV (com.magicsmart.developertv).
+            التوقيع: ${{ needs.build.outputs.signed == 'true' && 'موقَّع بمفتاح الإصدار' || 'توقيع debug (لم تُضبط أسرار التوقيع)' }}.
+            تحقق من الملفات عبر SHA256SUMS.txt.
+          files: |
+            apks/**/*.apk
+            apks/**/SHA256SUMS.txt

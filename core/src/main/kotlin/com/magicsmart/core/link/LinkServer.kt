@@ -67,6 +67,7 @@ class LinkServer private constructor(private val ctx: Context) {
             acceptJob = scope.launch {
                 while (isActive) {
                     val s = try { ss.accept() } catch (e: IOException) { break }
+                    if (open.size >= 8) { try { s.close() } catch (e: Exception) { }; continue }
                     launch { handle(s) }
                 }
             }
