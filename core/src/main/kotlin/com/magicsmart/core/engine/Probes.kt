@@ -16,7 +16,7 @@ internal object Probes {
         return if (ai != null) {
             TestOutcome(
                 ResultStatus.SUCCESS,
-                "يوجد نشاط يعالج المسار: ${ai.packageName}/${ai.name.substringAfterLast('.')}. " +
+                "يوجد نشاط يعالج المسار: ${ai.packageName}/${ai.name}. " +
                     "وجود المسار لا يعني تفعيل أي إعداد."
             )
         } else {
@@ -31,10 +31,20 @@ internal object Probes {
 
     @Suppress("DEPRECATION")
     fun probeComponent(tc: TestContext, cn: ComponentName): TestOutcome = try {
-        val ai = tc.context.packageManager.getActivityInfo(cn, 0)
+        val pm = tc.context.packageManager
+        // MATCH_DISABLED_COMPONENTS: الأنشطة المعطّلة حالياً تُعتبر "موجودة لكن معطّلة" لا "غير موجودة"
+        val ai = pm.getActivityInfo(cn, PackageManager.MATCH_DISABLED_COMPONENTS)
+        val enabled = when (pm.getComponentEnabledSetting(cn)) {
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
+            PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> ai.enabled
+            else -> false
+        }
         val perm: String? = ai.permission
         when {
-            !ai.enabled -> TestOutcome(ResultStatus.BLOCKED, "المكوّن موجود لكنه معطّل", "المكوّن معطّل من النظام")
+            !enabled -> TestOutcome(
+                ResultStatus.BLOCKED, "المكوّن موجود لكنه معطّل حالياً",
+                "معطّل في النظام (يُفعَّل عادةً عند تفعيل خيارات المطوّر)", "فعّل خيارات المطوّر ثم أعد الفحص"
+            )
             !ai.exported -> TestOutcome(
                 ResultStatus.BLOCKED, "المكوّن موجود لكنه غير مصدَّر",
                 "لا يمكن لتطبيق خارجي تشغيله دون صلاحيات نظام"

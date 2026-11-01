@@ -17,7 +17,8 @@ object DeveloperOptionsTests {
         Candidate("DEV-C01", "com.android.settings", "com.android.settings.DevelopmentSettings", DeviceTarget.ANY),
         Candidate("DEV-C02", "com.android.settings", "com.android.settings.development.DevelopmentSettingsActivity", DeviceTarget.ANY),
         Candidate("DEV-C03", "com.android.settings", "com.android.settings.Settings\$DevelopmentSettingsDashboardActivity", DeviceTarget.ANY),
-        Candidate("DEV-C04", "com.android.tv.settings", "com.android.tv.settings.system.development.DevelopmentActivity", DeviceTarget.TV)
+        Candidate("DEV-C04", "com.android.tv.settings", "com.android.tv.settings.system.development.DevelopmentActivity", DeviceTarget.TV),
+        Candidate("DEV-C05", "com.android.settings", "com.android.settings.DevelopmentSettingsDisabledActivity", DeviceTarget.ANY)
     )
 
     private val base = listOf(
@@ -40,7 +41,14 @@ object DeveloperOptionsTests {
             engine = Engine.DEVELOPER_OPTIONS, method = "PackageManager.resolveActivity",
             expected = "وجود نشاط يعالج المسار",
             launch = LaunchSpec(action = DEV_ACTION)
-        ) { tc -> Probes.probeAction(tc, DEV_ACTION) },
+        ) { tc ->
+            val p = Probes.probeAction(tc, DEV_ACTION)
+            if (p.status == ResultStatus.SUCCESS && p.actual.contains("Disabled")) TestOutcome(
+                ResultStatus.USER_ACTION_REQUIRED, p.actual,
+                "المسار موجود لكنه يقود إلى صفحة «خيارات المطوّر غير مفعّلة»",
+                "فعّل خيارات المطوّر أولاً (DEV-010) ثم أعد الفحص"
+            ) else p
+        },
         TestDefinition(
             id = "DEV-010", name = "مسار تفعيل Developer Options عبر رقم البنية",
             description = "التفعيل الرسمي: الضغط 7 مرات على رقم البنية في معلومات الجهاز",

@@ -1,5 +1,6 @@
 package com.magicsmart.core.engine
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.view.InputDevice
@@ -15,13 +16,13 @@ object AndroidTvTests {
             TestOutcome(ResultStatus.SUCCESS, "الجهاز يعمل بوضع التلفاز: ${tc.snapshot.manufacturer} ${tc.snapshot.model}")
         },
         TestDefinition(
-            id = "TV-002", name = "غياب شاشة اللمس", description = "التلفاز يجب ألا يعتمد على اللمس",
+            id = "TV-002", name = "دعم اللمس", description = "هل يعلن الجهاز دعم شاشة اللمس؟ (واجهة التلفاز لا تعتمد عليه)",
             engine = Engine.ANDROID_TV, target = DeviceTarget.TV,
-            method = "PackageManager.hasSystemFeature(TOUCHSCREEN)", expected = "لا توجد شاشة لمس"
+            method = "PackageManager.hasSystemFeature(TOUCHSCREEN)", expected = "معلومة وصفية"
         ) { tc ->
             if (tc.context.packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN))
-                TestOutcome(ResultStatus.UNKNOWN, "الجهاز يعلن دعم اللمس", "غير معتاد على التلفاز")
-            else TestOutcome(ResultStatus.SUCCESS, "لا توجد شاشة لمس")
+                TestOutcome(ResultStatus.SUCCESS, "الجهاز يعلن دعم اللمس (شائع في الشاشات التفاعلية)")
+            else TestOutcome(ResultStatus.SUCCESS, "لا توجد شاشة لمس (المعتاد في التلفاز)")
         },
         TestDefinition(
             id = "TV-003", name = "Leanback فقط", description = "هل الجهاز يعمل بواجهة Leanback حصراً؟",
@@ -45,15 +46,19 @@ object AndroidTvTests {
             else TestOutcome(ResultStatus.UNKNOWN, "لم يُرصد D-pad الآن", "قد يكون الريموت غير متصل أو يُعرَّف كلوحة مفاتيح")
         },
         TestDefinition(
-            id = "TV-005", name = "حزمة إعدادات التلفاز", description = "هل توجد com.android.tv.settings؟",
+            id = "TV-005", name = "جهة معالجة إعدادات التلفاز",
+            description = "أي حزمة تتولى صفحة الإعدادات العامة؟ (قد تكون واجهة المصنّع لا com.android.tv.settings)",
             engine = Engine.ANDROID_TV, target = DeviceTarget.TV,
-            method = "PackageManager.getPackageInfo", expected = "وجود الحزمة"
+            method = "resolveActivity(android.settings.SETTINGS) + getPackageInfo", expected = "تحديد الحزمة المسؤولة"
         ) { tc ->
-            if (Probes.hasPackage(tc.context, "com.android.tv.settings"))
-                TestOutcome(ResultStatus.SUCCESS, "الحزمة موجودة")
+            @Suppress("DEPRECATION")
+            val ai = tc.context.packageManager
+                .resolveActivity(Intent("android.settings.SETTINGS"), PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo
+            val tvPkg = Probes.hasPackage(tc.context, "com.android.tv.settings")
+            if (ai == null) TestOutcome(ResultStatus.UNKNOWN, "لا نشاط يعالج صفحة الإعدادات العامة")
             else TestOutcome(
-                ResultStatus.UNKNOWN, "الحزمة غير موجودة بهذا الاسم",
-                "قد يستخدم المصنّع حزمة إعدادات مختلفة", "ستُعالج في ملفات OEM (المرحلة 4)"
+                ResultStatus.SUCCESS,
+                "الإعدادات العامة: ${ai.packageName}/${ai.name} — com.android.tv.settings ${if (tvPkg) "موجودة" else "غير موجودة"}"
             )
         }
     )

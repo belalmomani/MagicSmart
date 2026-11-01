@@ -1,5 +1,6 @@
 package com.magicsmart.core.engine
 
+import android.os.Build
 import com.magicsmart.core.ResultStatus
 import com.magicsmart.core.SettingState
 import java.net.InetSocketAddress
@@ -90,6 +91,40 @@ object AdbAnalyzerTests {
                     TestOutcome(ResultStatus.FAILED, "لم يستجب المنفذ ${f.port}", "${e.javaClass.simpleName}: ${e.message}")
                 }
             }
+        },
+        TestDefinition(
+            id = "ADB-005", name = "منفذ ADB الشبكي الكلاسيكي (adb tcpip)",
+            description = "إن أعلنت الخصائص منفذاً (مثل 5555) فاختبر استجابته على الحلقة المحلية 127.0.0.1؛ لا يخرج الاتصال من الجهاز.",
+            engine = Engine.ADB, method = "getprop + Socket.connect(127.0.0.1)",
+            expected = "المنفذ يستجيب عند تفعيل التصحيح"
+        ) { tc ->
+            val port = listOf("service.adb.tcp.port", "persist.adb.tcp.port")
+                .firstNotNullOfOrNull { k -> Env.prop(k)?.toIntOrNull()?.takeIf { it in 1..65535 } }
+            if (port == null) TestOutcome(ResultStatus.UNKNOWN, "لا منفذ شبكي معلن في الخصائص")
+            else try {
+                Socket().use { it.connect(InetSocketAddress("127.0.0.1", port), 1500) }
+                TestOutcome(ResultStatus.SUCCESS, "المنفذ $port يستجيب محلياً (adbd يستمع). هذا لا يعني أن الاتصال مصرَّح.")
+            } catch (e: Exception) {
+                if (tc.snapshot.usbDebugging.state != SettingState.ENABLED) TestOutcome(
+                    ResultStatus.USER_ACTION_REQUIRED, "المنفذ $port معلن لكنه مغلق الآن (تصحيح USB غير مفعّل)",
+                    e.javaClass.simpleName, "فعّل خيارات المطوّر ثم تصحيح USB وأعد الفحص؛ ربما يُفتح المنفذ بعدها (لم يُتحقق)"
+                ) else TestOutcome(
+                    ResultStatus.FAILED, "المنفذ $port لا يستجيب رغم تفعيل التصحيح", "${e.javaClass.simpleName}: ${e.message}"
+                )
+            }
+        },
+        TestDefinition(
+            id = "ADB-006", name = "مستوى تصحيح البناء",
+            description = "نوع البناء (user/userdebug/eng) وخصائص الأمان المعلنة. معلومة وصفية.",
+            engine = Engine.ADB, method = "Build.TYPE + getprop", expected = "قراءة المعلومات"
+        ) { _ ->
+            val props = listOf("ro.debuggable", "ro.secure", "ro.adb.secure").mapNotNull { k -> Env.prop(k)?.let { "$k=$it" } }
+            TestOutcome(
+                ResultStatus.SUCCESS,
+                "Build.TYPE=${Build.TYPE}، Build.TAGS=${Build.TAGS}" + if (props.isNotEmpty()) "، " + props.joinToString("، ") else "",
+                null,
+                if (Build.TYPE != "user") "بناء غير تجاري (${Build.TYPE}): قد يكون التصحيح أقل تقييداً من الأجهزة التجارية؛ تأكد بتفعيله فعلياً." else null
+            )
         }
     )
 }

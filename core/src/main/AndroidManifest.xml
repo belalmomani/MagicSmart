@@ -7,9 +7,11 @@
     <!-- Package Visibility (Android 11+): الحزم والمسارات التي يفحصها المحرك فقط -->
     <queries>
         <package android:name="com.android.launcher3" />
+        <package android:name="com.android.permissioncontroller" />
         <package android:name="com.android.settings" />
         <package android:name="com.android.tv.settings" />
         <package android:name="com.android.vending" />
+        <package android:name="com.cultraview.setting" />
         <package android:name="com.droidlogic.tv.settings" />
         <package android:name="com.google.android.apps.tv.launcherx" />
         <package android:name="com.google.android.gms" />

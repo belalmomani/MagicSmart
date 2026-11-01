@@ -4,17 +4,20 @@
   ],
   "brands": [
     "MAGIC",
-    "MAGIC SMART"
+    "MAGIC SMART",
+    "HiDPT"
   ],
   "model_regex": "",
   "hardware_regex": "",
   "tv_only": false,
   "min_api": 1,
   "max_api": 999,
-  "packages": [],
+  "packages": [
+    "com.cultraview.setting"
+  ],
   "components": [],
   "actions": [],
   "id": "magic_smart",
   "name": "MAGIC SMART (GDYM)",
-  "notes": "جهاز المستخدم: الشركة GDYM والموديل SMART_TV على Android 14. يُثرى هذا الملف من نتائج الفحص الفعلية."
+  "notes": "جهاز مُحلَّل فعلياً: GDYM SMART_TV، Android 14 بناء userdebug، لوحة HiSilicon Hi3751V352E (bigfish). الإعدادات العامة والواي فاي تتولاها com.cultraview.setting، وبقية الصفحات من com.android.settings (AOSP). لا توجد com.android.tv.settings."
 }

@@ -11,6 +11,8 @@
     "com.google.android.gms",
     "com.android.vending",
     "com.android.launcher3",
-    "com.droidlogic.tv.settings"
+    "com.droidlogic.tv.settings",
+    "com.cultraview.setting",
+    "com.android.permissioncontroller"
   ]
 }
