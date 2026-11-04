@@ -64,7 +64,8 @@ internal class LinkDiscovery(ctx: Context, private val onChange: (List<Discovere
                     val attrs = serviceInfo.attributes
                     val id = attrs["id"]?.toString(Charsets.UTF_8)
                     val name = attrs["name"]?.toString(Charsets.UTF_8) ?: serviceInfo.serviceName
-                    val host = serviceInfo.host?.hostAddress
+                    // نفضّل IPv4 المُعلن من التلفاز؛ عنوان NSD قد يكون IPv6 محلياً لا يصل منه الاتصال
+                    val host = attrs["ip"]?.toString(Charsets.UTF_8)?.takeIf { it.isNotBlank() } ?: serviceInfo.host?.hostAddress
                     synchronized(lock) {
                         if (host != null) found[serviceInfo.serviceName] = DiscoveredTv(serviceInfo.serviceName, name, id, host, serviceInfo.port)
                         resolving = false

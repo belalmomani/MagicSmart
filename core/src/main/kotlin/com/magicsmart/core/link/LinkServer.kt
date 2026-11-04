@@ -63,7 +63,7 @@ class LinkServer private constructor(private val ctx: Context) {
             val svc = "MAGICSMART-" + id.take(6)
             registerNsd(svc, ss.localPort, id)
             _state.value = ServerState(true, Env.localIpv4(), ss.localPort, svc)
-            _event.value = "وضع الربط يعمل"
+            _event.value = "وضع الربط يعمل / Pairing mode is on"
             acceptJob = scope.launch {
                 while (isActive) {
                     val s = try { ss.accept() } catch (e: IOException) { break }
@@ -72,7 +72,7 @@ class LinkServer private constructor(private val ctx: Context) {
                 }
             }
         } catch (e: Exception) {
-            _event.value = "تعذّر بدء الاستماع: ${e.message}"
+            _event.value = "تعذّر بدء الاستماع / Could not start listening: ${e.message}"
             stop()
         }
     }
@@ -93,7 +93,7 @@ class LinkServer private constructor(private val ctx: Context) {
     fun removePeer(id: String) {
         LinkStore.remove(ctx, id)
         _peers.value = LinkStore.peers(ctx)
-        _event.value = "أُلغي ربط الجهاز"
+        _event.value = "أُلغي ربط الجهاز / Device unpaired"
     }
 
     private fun registerNsd(svc: String, port: Int, id: String) {
@@ -101,17 +101,18 @@ class LinkServer private constructor(private val ctx: Context) {
         val info = NsdServiceInfo().apply {
             serviceName = svc; serviceType = Wire.SERVICE_TYPE; setPort(port)
             setAttribute("id", id); setAttribute("name", LinkStore.deviceName(ctx))
+            Env.localIpv4()?.let { setAttribute("ip", it) }
         }
         val l = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(i: NsdServiceInfo) {}
             override fun onServiceUnregistered(i: NsdServiceInfo) {}
             override fun onUnregistrationFailed(i: NsdServiceInfo, code: Int) {}
             override fun onRegistrationFailed(i: NsdServiceInfo, code: Int) {
-                _event.value = "تعذّر نشر الخدمة (رمز $code). استخدم العنوان اليدوي من الهاتف."
+                _event.value = "تعذّر نشر الخدمة (رمز $code). استخدم العنوان اليدوي من الهاتف. / Could not advertise the service (code $code). Use the manual address on the phone."
             }
         }
         regListener = l
-        try { nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, l) } catch (e: Exception) { _event.value = "تعذّر نشر الخدمة: ${e.message}" }
+        try { nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, l) } catch (e: Exception) { _event.value = "تعذّر نشر الخدمة / Could not advertise service: ${e.message}" }
     }
 
     private fun unregisterNsd() {
@@ -144,7 +145,7 @@ class LinkServer private constructor(private val ctx: Context) {
 
     private suspend fun doPair(sock: Socket, inp: DataInputStream, out: DataOutputStream, hello: JSONObject) {
         if (!busy.compareAndSet(false, true)) {
-            Wire.writeJson(out, Wire.error("التلفاز مشغول بطلب ربط آخر", "busy")); return
+            Wire.writeJson(out, Wire.error("التلفاز مشغول بطلب ربط آخر / TV is busy with another pairing request", "busy")); return
         }
         try {
             val peerName = hello.optString("name", "جهاز").take(40)
@@ -163,7 +164,7 @@ class LinkServer private constructor(private val ctx: Context) {
             val pkA = Wire.unb64(reveal.getString("pk"))
             val nonceA = Wire.unb64(reveal.getString("nonce"))
             if (!LinkCrypto.eq(LinkCrypto.sha256(pkA, nonceA), commit)) {
-                Wire.writeJson(out, Wire.error("فشل التحقق من الالتزام")); _event.value = "طلب ربط مرفوض: التزام غير صحيح"; return
+                Wire.writeJson(out, Wire.error("فشل التحقق من الالتزام / Commitment verification failed")); _event.value = "طلب ربط مرفوض: التزام غير صحيح / Pairing request rejected: bad commitment"; return
             }
             val secret = LinkCrypto.ecdh(kp.private, pkA)
             val transcript = LinkCrypto.sha256(pkA, nonceA, pkB, nonceB)
@@ -177,7 +178,7 @@ class LinkServer private constructor(private val ctx: Context) {
             _prompt.value = null
             decision = null
             if (!accepted) {
-                Wire.writeJson(out, JSONObject().put("type", "reject")); _event.value = "رُفض طلب الربط من $peerName"; return
+                Wire.writeJson(out, JSONObject().put("type", "reject")); _event.value = "رُفض طلب الربط من $peerName / Pairing request from $peerName rejected"; return
             }
 
             val macKey = LinkCrypto.hkdf(secret, transcript, "MS-CONFIRM", 32)
@@ -186,12 +187,12 @@ class LinkServer private constructor(private val ctx: Context) {
             val peerConf = Wire.readJson(inp)
             val ok = peerConf.optString("type") == "confirm" &&
                 LinkCrypto.eq(Wire.unb64(peerConf.getString("mac")), LinkCrypto.hmac(macKey, "client".toByteArray(), transcript))
-            if (!ok) { _event.value = "فشل تأكيد الاقتران من $peerName"; return }
+            if (!ok) { _event.value = "فشل تأكيد الاقتران من $peerName / Pairing confirmation from $peerName failed"; return }
 
             val psk = LinkCrypto.hkdf(secret, transcript, "MS-PSK", 32)
             LinkStore.add(ctx, PairedPeer(peerId, peerName, psk, System.currentTimeMillis()))
             _peers.value = LinkStore.peers(ctx)
-            _event.value = "تم ربط $peerName"
+            _event.value = "تم ربط $peerName / Paired with $peerName"
         } finally {
             _prompt.value = null
             decision = null
@@ -202,7 +203,7 @@ class LinkServer private constructor(private val ctx: Context) {
     private fun doSession(sock: Socket, inp: DataInputStream, out: DataOutputStream, hello: JSONObject) {
         val peer = LinkStore.find(ctx, hello.getString("deviceId"))
         if (peer == null) {
-            Wire.writeJson(out, Wire.error("هذا الجهاز غير مقترن", "unpaired")); return
+            Wire.writeJson(out, Wire.error("هذا الجهاز غير مقترن / This device isn\u2019t paired", "unpaired")); return
         }
         val pkC = Wire.unb64(hello.getString("pk"))
         val nonceC = Wire.unb64(hello.getString("nonce"))
@@ -219,7 +220,7 @@ class LinkServer private constructor(private val ctx: Context) {
         )
         val auth = Wire.readJson(inp)
         if (!LinkCrypto.eq(Wire.unb64(auth.getString("mac")), LinkCrypto.hmac(authKey, "client".toByteArray(), transcript))) {
-            _event.value = "فشلت مصادقة جهاز مقترن (${peer.name})"; return
+            _event.value = "فشلت مصادقة جهاز مقترن / Authentication failed for a paired device (${peer.name})"; return
         }
         val (c2s, s2c) = LinkCrypto.sessionKeys(secret, peer.psk, transcript)
         val ch = SecureChannel(inp, out, sendKey = s2c, recvKey = c2s)
@@ -231,11 +232,11 @@ class LinkServer private constructor(private val ctx: Context) {
                 "get_report" -> {
                     val run = ScanController.get(ctx).currentRun()
                     ch.send(JSONObject().put("type", "report").put("run", ResultStore.toJson(run)))
-                    _event.value = "أُرسل التقرير إلى ${peer.name}"
+                    _event.value = "أُرسل التقرير إلى ${peer.name} / Report sent to ${peer.name}"
                 }
                 "unpair" -> {
                     LinkStore.remove(ctx, peer.id); _peers.value = LinkStore.peers(ctx)
-                    ch.send(JSONObject().put("type", "ok")); _event.value = "ألغى ${peer.name} الربط"; return
+                    ch.send(JSONObject().put("type", "ok")); _event.value = "ألغى ${peer.name} الربط / ${peer.name} unpaired"; return
                 }
                 else -> ch.send(JSONObject().put("type", "error").put("message", "أمر غير مدعوم"))
             }

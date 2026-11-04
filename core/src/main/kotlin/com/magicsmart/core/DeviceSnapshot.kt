@@ -2,10 +2,10 @@ package com.magicsmart.core
 
 /** حالة إعداد نظام كما قُرئت فعلياً من الجهاز. */
 enum class SettingState(val arabic: String) {
-    ENABLED("مفعّل"),
-    DISABLED("غير مفعّل"),
-    UNSUPPORTED("غير مدعوم في هذا الإصدار"),
-    UNREADABLE("لا يمكن قراءته")
+    ENABLED("مفعّل / Enabled"),
+    DISABLED("غير مفعّل / Disabled"),
+    UNSUPPORTED("غير مدعوم في هذا الإصدار / Unsupported on this version"),
+    UNREADABLE("لا يمكن قراءته / Unreadable")
 }
 
 data class SettingReading(val state: SettingState, val note: String? = null)

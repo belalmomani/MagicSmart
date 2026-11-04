@@ -19,5 +19,5 @@
   "actions": [],
   "id": "magic_smart",
   "name": "MAGIC SMART (GDYM)",
-  "notes": "جهاز مُحلَّل فعلياً: GDYM SMART_TV، Android 14 بناء userdebug، لوحة HiSilicon Hi3751V352E (bigfish). الإعدادات العامة والواي فاي تتولاها com.cultraview.setting، وبقية الصفحات من com.android.settings (AOSP). لا توجد com.android.tv.settings."
+  "notes": "جهاز مُحلَّل فعلياً: GDYM SMART_TV، Android 14 بناء userdebug، لوحة HiSilicon Hi3751V352E (bigfish). الإعدادات العامة والواي فاي تتولاها com.cultraview.setting، وبقية الصفحات من com.android.settings (AOSP). لا توجد com.android.tv.settings. تعطيل متعمَّد لخيارات المطوّر مؤكَّد (المسار يقود إلى DevelopmentSettingsDisabledActivity). للبحث عن فرم وير بديل استخدم اسم اللوحة bigfish ومعالج Hi3751V352E، لا العلامة التجارية."
 }

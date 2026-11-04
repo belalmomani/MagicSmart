@@ -7,14 +7,14 @@ import com.magicsmart.core.ResultStatus
 import java.util.concurrent.ConcurrentHashMap
 
 enum class Engine(val arabic: String) {
-    DEVELOPER_OPTIONS("خيارات المطوّر"),
-    SETTINGS_SCANNER("ماسح الإعدادات"),
-    USB_DEBUGGING("تصحيح USB"),
-    WIRELESS_DEBUGGING("التصحيح اللاسلكي"),
-    ADB("محلل ADB"),
-    ADVANCED_PERMISSIONS("الصلاحيات المتقدمة"),
-    OEM("محلل الشركات"),
-    ANDROID_TV("محلل Android TV")
+    DEVELOPER_OPTIONS("خيارات المطوّر / Developer options"),
+    SETTINGS_SCANNER("ماسح الإعدادات / Settings scanner"),
+    USB_DEBUGGING("تصحيح USB / USB debugging"),
+    WIRELESS_DEBUGGING("التصحيح اللاسلكي / Wireless debugging"),
+    ADB("محلل ADB / ADB analyzer"),
+    ADVANCED_PERMISSIONS("الصلاحيات المتقدمة / Advanced permissions"),
+    OEM("محلل الشركات / OEM analyzer"),
+    ANDROID_TV("محلل Android TV / Android TV analyzer")
 }
 
 enum class DeviceTarget { ANY, PHONE, TV }

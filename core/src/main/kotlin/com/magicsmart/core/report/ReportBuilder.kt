@@ -17,28 +17,28 @@ object ReportBuilder {
         run.results.groupingBy { it.status }.eachCount().entries.joinToString("، ") { "${label(it.key)}: ${it.value}" }
 
     fun build(run: StoredRun): String = buildString {
-        appendLine("تقرير MAGIC SMART — Developer Unlock Engine")
-        appendLine("التاريخ: ${date(run.id)}")
-        appendLine("الجهاز: ${run.device} (${if (run.isTv) "تلفاز" else "هاتف"}) — Android ${run.androidInfo}")
-        appendLine("ملف الشركة: ${run.oem}")
-        appendLine("الاختبارات المنفذة: ${run.results.size} (${if (run.complete) "دورة مكتملة" else "دورة غير مكتملة"})")
-        appendLine("الملخص: ${counts(run)}")
+        appendLine("تقرير MAGIC SMART — Developer Unlock Engine / MAGIC SMART Report")
+        appendLine("التاريخ / Date: ${date(run.id)}")
+        appendLine("الجهاز / Device: ${run.device} (${if (run.isTv) "تلفاز / TV" else "هاتف / Phone"}) — Android ${run.androidInfo}")
+        appendLine("ملف الشركة / OEM profile: ${run.oem}")
+        appendLine("الاختبارات المنفذة / Tests run: ${run.results.size} (${if (run.complete) "دورة مكتملة / complete" else "دورة غير مكتملة / incomplete"})")
+        appendLine("الملخص / Summary: ${counts(run)}")
         val findings = ErrorAnalyzer.analyze(run.results)
         if (findings.isNotEmpty()) {
-            appendLine().appendLine("== تحليل الأخطاء ==")
+            appendLine().appendLine("== تحليل الأخطاء / Error analysis ==")
             findings.forEach {
-                appendLine("- ${it.title} (${it.ids.size}): ${it.explanation} المقترح: ${it.suggestion}")
-                appendLine("  الاختبارات: ${it.ids.joinToString(", ")}")
+                appendLine("- ${it.title} (${it.ids.size}): ${it.explanation} المقترح/Suggestion: ${it.suggestion}")
+                appendLine("  الاختبارات / Tests: ${it.ids.joinToString(", ")}")
             }
         }
         run.results.groupBy { it.engine }.forEach { (engine, list) ->
             appendLine().appendLine("== ${engineLabel(engine)} ==")
             list.forEach { r ->
                 appendLine("[${label(r.status)}] ${r.id} ${r.name}")
-                appendLine("  المتوقع: ${r.expected}")
-                appendLine("  الفعلي: ${r.actual}")
-                r.failureReason?.let { appendLine("  السبب: $it") }
-                r.nextAction?.let { appendLine("  الإجراء التالي: $it") }
+                appendLine("  المتوقع / Expected: ${r.expected}")
+                appendLine("  الفعلي / Actual: ${r.actual}")
+                r.failureReason?.let { appendLine("  السبب / Reason: $it") }
+                r.nextAction?.let { appendLine("  الإجراء التالي / Next step: $it") }
             }
         }
     }

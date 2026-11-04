@@ -1,6 +1,8 @@
 package com.magicsmart.core.link
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import com.magicsmart.core.report.ResultStore
 import com.magicsmart.core.report.StoredRun
 import kotlinx.coroutines.Dispatchers
@@ -23,12 +25,41 @@ sealed class PairResult {
 /** عميل الهاتف: اقتران بتأكيد رمز مرئي، ثم جلسات مصادَقة ومشفّرة لجلب التقارير. */
 internal object LinkClient {
 
+    /**
+     * يربط المقبس بشبكة Wi-Fi صراحةً. بدونه قد يمرّر Android الاتصال عبر بيانات الجوال
+     * (حين لا يملك الـ Wi-Fi إنترنت)، فيفشل الوصول إلى التلفاز رغم اكتشافه.
+     */
+    @Suppress("DEPRECATION")
+    private fun bindToWifi(ctx: Context, sock: Socket) {
+        try {
+            val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val n = cm.allNetworks.firstOrNull {
+                cm.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+            } ?: return
+            n.bindSocket(sock)
+        } catch (e: Exception) { /* نكمل بالمسار الافتراضي */ }
+    }
+
+    fun explain(e: Exception): String {
+        val msg = when (e) {
+            is java.net.SocketTimeoutException ->
+                "انتهت المهلة: لا رد من التلفاز. تحقق من عزل الأجهزة (AP isolation) في الراوتر ومن أن الهاتف على شبكة Wi-Fi نفسها. / Timed out: no reply from the TV. Check router AP isolation and that the phone is on the same Wi-Fi."
+            is java.net.ConnectException ->
+                "رفض التلفاز الاتصال أو لا يمكن الوصول إليه. تأكد أن «وضع الربط» يعمل على التلفاز وأن الجهازين على الشبكة نفسها. / The TV refused the connection or is unreachable. Make sure Pairing mode is on and both devices share the network."
+            is java.net.UnknownHostException -> "عنوان غير صالح. / Invalid address."
+            is java.io.EOFException -> "قطع التلفاز الاتصال (ربما أُغلقت شاشة الربط أو رُفض الطلب). / The TV closed the connection (pairing screen closed or request rejected)."
+            else -> e.message ?: e.javaClass.simpleName
+        }
+        return "$msg [${e.javaClass.simpleName}]"
+    }
+
     suspend fun pair(
         ctx: Context, host: String, port: Int,
         onSas: suspend (peerName: String, sas: String) -> Boolean
     ): PairResult = withContext(Dispatchers.IO) {
         try {
             Socket().use { sock ->
+                bindToWifi(ctx, sock)
                 sock.connect(InetSocketAddress(InetAddress.getByName(host), port), 5000)
                 sock.soTimeout = 15_000
                 val inp = DataInputStream(BufferedInputStream(sock.getInputStream()))
@@ -78,11 +109,12 @@ internal object LinkClient {
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            PairResult.Failed("${e.javaClass.simpleName}: ${e.message ?: "تعذّر الاتصال"}")
+            PairResult.Failed(explain(e))
         }
     }
 
     private fun openSession(ctx: Context, sock: Socket, host: String, port: Int, peer: PairedPeer): SecureChannel {
+        bindToWifi(ctx, sock)
         sock.connect(InetSocketAddress(InetAddress.getByName(host), port), 5000)
         sock.soTimeout = 15_000
         val inp = DataInputStream(BufferedInputStream(sock.getInputStream()))
@@ -97,7 +129,7 @@ internal object LinkClient {
         val resp = Wire.readJson(inp)
         if (resp.optString("type") == "error") {
             throw IllegalStateException(
-                if (resp.optString("code") == "unpaired") "التلفاز لا يعرف هذا الهاتف (ألغي الربط من جهته). أعد الاقتران."
+                if (resp.optString("code") == "unpaired") "التلفاز لا يعرف هذا الهاتف (ألغي الربط من جهته). أعد الاقتران. / The TV doesn\u2019t recognize this phone (it was unpaired there). Pair again."
                 else resp.optString("message", "رفض التلفاز")
             )
         }
@@ -107,7 +139,7 @@ internal object LinkClient {
         val authKey = LinkCrypto.authKey(peer.psk, transcript)
         // التحقق من هوية التلفاز: لا يستطيع إنتاج هذا الرمز إلا من يملك مفتاح الاقتران
         if (!LinkCrypto.eq(Wire.unb64(resp.getString("mac")), LinkCrypto.hmac(authKey, "server".toByteArray(), transcript)))
-            throw IllegalStateException("فشل التحقق من هوية التلفاز؛ ربما ليس الجهاز المقترن نفسه")
+            throw IllegalStateException("فشل التحقق من هوية التلفاز؛ ربما ليس الجهاز المقترن نفسه / Failed to verify the TV\u2019s identity; it may not be the paired device")
         Wire.writeJson(out, JSONObject().put("type", "auth").put("mac", Wire.b64(LinkCrypto.hmac(authKey, "client".toByteArray(), transcript))))
         val secret = LinkCrypto.ecdh(kp.private, pkS)
         val (c2s, s2c) = LinkCrypto.sessionKeys(secret, peer.psk, transcript)

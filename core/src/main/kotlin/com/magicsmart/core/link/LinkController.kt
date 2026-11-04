@@ -22,7 +22,7 @@ class LinkController private constructor(private val ctx: Context) {
     val tvs: StateFlow<List<DiscoveredTv>> = _tvs.asStateFlow()
     private val _paired = MutableStateFlow(LinkStore.peers(ctx))
     val paired: StateFlow<List<PairedPeer>> = _paired.asStateFlow()
-    private val _status = MutableStateFlow("غير متصل")
+    private val _status = MutableStateFlow("غير متصل / Not connected")
     val status: StateFlow<String> = _status.asStateFlow()
     private val _sas = MutableStateFlow<SasPrompt?>(null)
     val sas: StateFlow<SasPrompt?> = _sas.asStateFlow()
@@ -33,7 +33,7 @@ class LinkController private constructor(private val ctx: Context) {
     @Volatile private var sasAnswer: CompletableDeferred<Boolean>? = null
     @Volatile private var busy = false
 
-    fun startDiscovery() { discovery.start(); _status.value = "جارٍ البحث عن تلفازات في الشبكة…" }
+    fun startDiscovery() { discovery.start(); _status.value = "جارٍ البحث عن تلفازات في الشبكة… / Searching for TVs on the network…" }
     fun stopDiscovery() = discovery.stop()
 
     /** "192.168.1.5:43210" ← (المضيف، المنفذ) أو null. */
@@ -51,7 +51,7 @@ class LinkController private constructor(private val ctx: Context) {
         if (busy) return
         busy = true
         scope.launch {
-            _status.value = "جارٍ الاقتران… قارن الرمز مع الظاهر على التلفاز"
+            _status.value = "جارٍ الاقتران… قارن الرمز مع الظاهر على التلفاز / Pairing… compare the code with the TV\u2019s screen"
             val r = LinkClient.pair(ctx, host, port) { peerName, code ->
                 val d = CompletableDeferred<Boolean>()
                 sasAnswer = d
@@ -62,9 +62,9 @@ class LinkController private constructor(private val ctx: Context) {
                 ok
             }
             _status.value = when (r) {
-                is PairResult.Paired -> "تم الاقتران مع ${r.peer.name}"
+                is PairResult.Paired -> "تم الاقتران مع ${r.peer.name} / Paired with ${r.peer.name}"
                 is PairResult.Rejected -> r.reason
-                is PairResult.Failed -> "فشل الاقتران: ${r.reason}"
+                is PairResult.Failed -> "فشل الاقتران / Pairing failed: ${r.reason}"
             }
             _paired.value = LinkStore.peers(ctx)
             busy = false
@@ -75,13 +75,13 @@ class LinkController private constructor(private val ctx: Context) {
         if (busy) return
         busy = true
         scope.launch {
-            _status.value = "جارٍ الاتصال بـ ${peer.name}…"
+            _status.value = "جارٍ الاتصال بـ ${peer.name}… / Connecting to ${peer.name}…"
             try {
                 val run = LinkClient.fetchReport(ctx, host, port, peer)
                 _remote.value = RemoteReport(peer.name, run)
-                _status.value = "متصل ومصادَق — استُلم تقرير ${peer.name} (${run.results.size} اختباراً)"
+                _status.value = "متصل ومصادَق — استُلم تقرير ${peer.name} (${run.results.size} اختباراً) / Connected & authenticated — received ${peer.name}\u2019s report (${run.results.size} tests)"
             } catch (e: Exception) {
-                _status.value = "تعذّر جلب التقرير: ${e.message ?: e.javaClass.simpleName}"
+                _status.value = "تعذّر جلب التقرير / Could not fetch report: ${LinkClient.explain(e)}"
             }
             busy = false
         }
@@ -94,7 +94,7 @@ class LinkController private constructor(private val ctx: Context) {
             LinkStore.remove(ctx, peer.id)
             _paired.value = LinkStore.peers(ctx)
             if (_remote.value?.peerName == peer.name) _remote.value = null
-            _status.value = "أُلغي الربط مع ${peer.name}" + if (host == null) " (محلياً فقط؛ التلفاز لم يُبلَّغ)" else ""
+            _status.value = "أُلغي الربط مع ${peer.name} / Unpaired ${peer.name}" + if (host == null) " (محلياً فقط؛ التلفاز لم يُبلَّغ / local only, TV not notified)" else ""
         }
     }
 
