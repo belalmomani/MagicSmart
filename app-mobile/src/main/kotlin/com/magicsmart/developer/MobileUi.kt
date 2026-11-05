@@ -39,6 +39,7 @@ import com.magicsmart.core.assistant.Diagnosis
 import com.magicsmart.core.assistant.Feedback
 import com.magicsmart.core.engine.Engine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.magicsmart.core.engine.ScanController
 import com.magicsmart.core.engine.TestDefinition
