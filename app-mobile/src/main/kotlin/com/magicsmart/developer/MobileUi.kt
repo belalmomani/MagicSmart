@@ -32,7 +32,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.magicsmart.core.adb.AdbConnectResult
 import com.magicsmart.core.adb.AdbConnection
 import com.magicsmart.core.adb.AdbInstall
+import com.magicsmart.core.adb.AdbRemoteSession
 import com.magicsmart.core.adb.InstallResult
+import com.magicsmart.core.adb.TvKey
 import com.magicsmart.core.assistant.Assistant
 import com.magicsmart.core.assistant.AssistantState
 import com.magicsmart.core.assistant.Diagnosis
@@ -51,7 +53,7 @@ import com.magicsmart.core.report.ReportBuilder
 import com.magicsmart.core.report.StoredResult
 import com.magicsmart.core.report.StoredRun
 
-private enum class Screen { HOME, RESULTS, REPORTS, LINK, ASSIST, SHELL, DASHBOARD, INSTALL }
+private enum class Screen { HOME, RESULTS, REPORTS, LINK, ASSIST, SHELL, DASHBOARD, INSTALL, REMOTE }
 
 @Composable
 fun MagicMobileApp() {
@@ -63,7 +65,7 @@ fun MagicMobileApp() {
             var resultsEngine by remember { mutableStateOf<Engine?>(null) }
             BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
             when (screen) {
-                Screen.HOME -> HomeScreen(controller, { e -> resultsEngine = e; screen = Screen.RESULTS }, { screen = Screen.REPORTS }, { screen = Screen.LINK }, { screen = Screen.ASSIST }, { screen = Screen.SHELL }, { screen = Screen.DASHBOARD }, { screen = Screen.INSTALL })
+                Screen.HOME -> HomeScreen(controller, { e -> resultsEngine = e; screen = Screen.RESULTS }, { screen = Screen.REPORTS }, { screen = Screen.LINK }, { screen = Screen.ASSIST }, { screen = Screen.SHELL }, { screen = Screen.DASHBOARD }, { screen = Screen.INSTALL }, { screen = Screen.REMOTE })
                 Screen.RESULTS -> ResultsScreen(controller, resultsEngine) { screen = Screen.HOME }
                 Screen.REPORTS -> ReportsScreen(controller) { screen = Screen.HOME }
                 Screen.LINK -> LinkScreen { screen = Screen.HOME }
@@ -71,6 +73,7 @@ fun MagicMobileApp() {
                 Screen.SHELL -> AdbShellScreen { screen = Screen.HOME }
                 Screen.DASHBOARD -> AdbDashboardScreen { screen = Screen.HOME }
                 Screen.INSTALL -> AdbInstallScreen { screen = Screen.HOME }
+                Screen.REMOTE -> AdbRemoteScreen { screen = Screen.HOME }
             }
         }
     }
@@ -78,7 +81,7 @@ fun MagicMobileApp() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeScreen(controller: ScanController, onOpenResults: (Engine?) -> Unit, onOpenReports: () -> Unit, onOpenLink: () -> Unit, onOpenAssist: () -> Unit, onOpenShell: () -> Unit, onOpenDashboard: () -> Unit, onOpenInstall: () -> Unit) {
+private fun HomeScreen(controller: ScanController, onOpenResults: (Engine?) -> Unit, onOpenReports: () -> Unit, onOpenLink: () -> Unit, onOpenAssist: () -> Unit, onOpenShell: () -> Unit, onOpenDashboard: () -> Unit, onOpenInstall: () -> Unit, onOpenRemote: () -> Unit) {
     val context = LocalContext.current
     var snap by remember { mutableStateOf(DeviceInspector.inspect(context)) }
     val results by controller.results.collectAsState()
@@ -178,6 +181,9 @@ private fun HomeScreen(controller: ScanController, onOpenResults: (Engine?) -> U
                         }
                         OutlinedButton(onClick = onOpenInstall, modifier = Modifier.fillMaxWidth()) {
                             Text("تثبيت وإدارة تطبيقات APK / Install & manage APKs")
+                        }
+                        OutlinedButton(onClick = onOpenRemote, modifier = Modifier.fillMaxWidth()) {
+                            Text("ريموت كنترول / Remote control")
                         }
                     }
                 }
@@ -1059,4 +1065,163 @@ private fun AdbInstallScreen(onBack: () -> Unit) {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AdbRemoteScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var host by AdbTarget::host
+    var port by AdbTarget::port
+    var session by remember { mutableStateOf<AdbRemoteSession?>(null) }
+    var connecting by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("أدخل عنوان التلفاز ومنفذه ثم اتصل. / Enter the TV's address and port, then connect.") }
+    var confirmOpen by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) { onDispose { session?.close() } }
+
+    fun connect() {
+        val p = port.toIntOrNull()
+        if (host.isBlank() || p == null) { status = "أدخل عنواناً ومنفذاً صحيحين. / Enter a valid address and port."; return }
+        connecting = true
+        status = "جارٍ الاتصال… / Connecting…"
+        scope.launch {
+            val (conn, s) = AdbRemoteSession.open(context, host.trim(), p)
+            connecting = false
+            when (conn) {
+                is AdbConnectResult.Connected -> { session = s; status = "متصل. استخدم الأزرار أدناه. / Connected. Use the buttons below." }
+                is AdbConnectResult.AwaitingDeviceApproval -> status = "اقبل «السماح بتصحيح USB؟» على شاشة التلفاز بالريموت، ثم اضغط اتصال مجدداً. / Accept the prompt on the TV, then connect again."
+                is AdbConnectResult.Failed -> status = "فشل الاتصال / Connection failed: ${conn.reason}"
+            }
+        }
+    }
+
+    fun press(code: Int, label: String) {
+        val s = session ?: return
+        scope.launch {
+            status = "أُرسل: $label"
+            s.sendKeyEvent(code).onFailure { status = "فشل الإرسال / Send failed: ${it.message}" }
+        }
+    }
+
+    if (confirmOpen) {
+        AlertDialog(
+            onDismissRequest = { confirmOpen = false },
+            title = { Text("بدء جلسة ريموت / Start remote session") },
+            text = {
+                Text(
+                    "ستُفتح جلسة واحدة تبقى حتى تغادر هذه الشاشة. كل ما تُرسله أزرار هذه الشاشة هو ضغطات تنقّل (أعلى/أسفل/OK/رجوع/صوت…) فقط، تماماً كالريموت الفعلي؛ لا تُنفَّذ أوامر أخرى ولا يُطلب تأكيد لكل ضغطة.\n" +
+                        "One session opens and stays until you leave this screen. Every button here only sends a navigation key press (up/down/OK/back/volume\u2026), exactly like the physical remote; nothing else runs and no per-press confirmation is asked."
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmOpen = false; connect() }) { Text("أوافق وأتصل / I agree, connect") } },
+            dismissButton = { TextButton(onClick = { confirmOpen = false }) { Text("إلغاء / Cancel") } }
+        )
+    }
+
+    Scaffold(topBar = {
+        CenterAlignedTopAppBar(
+            title = { Text("ريموت كنترول / Remote control") },
+            navigationIcon = { TextButton(onClick = onBack) { Text("رجوع / Back") } }
+        )
+    }) { pad ->
+        Column(Modifier.padding(pad).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = host, onValueChange = { host = it }, label = { Text("عنوان التلفاز / TV address") }, singleLine = true, enabled = session == null, modifier = Modifier.weight(2f))
+                        OutlinedTextField(value = port, onValueChange = { port = it }, label = { Text("منفذ / Port") }, singleLine = true, enabled = session == null, modifier = Modifier.weight(1f))
+                    }
+                    if (session == null) {
+                        Button(onClick = { confirmOpen = true }, enabled = !connecting, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (connecting) "جارٍ الاتصال… / Connecting…" else "اتصال / Connect")
+                        }
+                    } else {
+                        OutlinedButton(onClick = { session?.close(); session = null; status = "قُطع الاتصال. / Disconnected." }, modifier = Modifier.fillMaxWidth()) {
+                            Text("قطع الاتصال / Disconnect")
+                        }
+                    }
+                    Text(status, style = MaterialTheme.typography.bodySmall, color = Color(0xFF81D4FA))
+                }
+            }
+            if (session != null) {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        RemoteButton("▲") { press(TvKey.UP, "أعلى / Up") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                            RemoteButton("◀") { press(TvKey.LEFT, "يسار / Left") }
+                            RemoteButton("OK") { press(TvKey.SELECT, "تحديد / OK") }
+                            RemoteButton("▶") { press(TvKey.RIGHT, "يمين / Right") }
+                        }
+                        RemoteButton("▼") { press(TvKey.DOWN, "أسفل / Down") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            RemoteButton("رجوع\nBack", wide = true) { press(TvKey.BACK, "رجوع / Back") }
+                            RemoteButton("الرئيسية\nHome", wide = true) { press(TvKey.HOME, "الرئيسية / Home") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            RemoteButton("القائمة\nMenu", wide = true) { press(TvKey.MENU, "القائمة / Menu") }
+                            RemoteButton("تشغيل/إيقاف\nPlay", wide = true) { press(TvKey.PLAY_PAUSE, "تشغيل/إيقاف / Play-pause") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            RemoteButton("صوت-\nVol-", wide = true) { press(TvKey.VOLUME_DOWN, "خفض الصوت / Volume down") }
+                            RemoteButton("كتم\nMute", wide = true) { press(TvKey.MUTE, "كتم / Mute") }
+                            RemoteButton("صوت+\nVol+", wide = true) { press(TvKey.VOLUME_UP, "رفع الصوت / Volume up") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            RemoteButton("قناة+\nCH+", wide = true) { press(TvKey.CHANNEL_UP, "قناة+ / Channel up") }
+                            RemoteButton("قناة-\nCH-", wide = true) { press(TvKey.CHANNEL_DOWN, "قناة- / Channel down") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            RemoteButton("المصدر\nSource", wide = true) { press(TvKey.TV_INPUT, "المصدر / Source") }
+                            RemoteButton("الإعدادات\nSettings", wide = true) { press(TvKey.SETTINGS, "الإعدادات / Settings") }
+                        }
+                        Text("التشغيل / Playback", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            RemoteButton("◁◁") { press(TvKey.PREVIOUS, "السابق / Previous") }
+                            RemoteButton("⏪") { press(TvKey.REWIND, "إرجاع / Rewind") }
+                            RemoteButton("⏹") { press(TvKey.STOP, "إيقاف / Stop") }
+                            RemoteButton("⏩") { press(TvKey.FAST_FORWARD, "تقديم / Fast-forward") }
+                            RemoteButton("▷▷") { press(TvKey.NEXT, "التالي / Next") }
+                        }
+                        Text("الأرقام / Numbers", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        for (row in 0..2) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                for (col in 1..3) {
+                                    val n = row * 3 + col
+                                    RemoteButton("$n") { press(TvKey.NUM_0 + n, "رقم $n / Number $n") }
+                                }
+                            }
+                        }
+                        RemoteButton("0") { press(TvKey.NUM_0, "رقم 0 / Number 0") }
+                        Text("أزرار ملوَّنة / Color keys", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ColorButton(Color(0xFFE53935)) { press(TvKey.PROG_RED, "أحمر / Red") }
+                            ColorButton(Color(0xFF43A047)) { press(TvKey.PROG_GREEN, "أخضر / Green") }
+                            ColorButton(Color(0xFFFDD835)) { press(TvKey.PROG_YELLOW, "أصفر / Yellow") }
+                            ColorButton(Color(0xFF1E88E5)) { press(TvKey.PROG_BLUE, "أزرق / Blue") }
+                        }
+                        Text(
+                            "أزرار الجهاز الأصلي الخاصة (P.MODE, S.MODE, SLEEP, FAV, EPG, REC, T.SHIFT, AUDIO\u2026) لا تملك كوداً قياسياً في Android، فلم تُضَف تجنباً لتخمين خاطئ.\n" +
+                                "This remote's vendor-specific buttons have no standard Android key code, so they were left out rather than guessed.",
+                            style = MaterialTheme.typography.bodySmall, color = Color.Gray
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColorButton(color: Color, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, modifier = Modifier.size(44.dp), colors = ButtonDefaults.outlinedButtonColors(containerColor = color)) {}
+}
+
+@Composable
+private fun RemoteButton(label: String, wide: Boolean = false, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = if (wide) Modifier.width(120.dp).height(56.dp) else Modifier.size(64.dp)
+    ) { Text(label, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
 }
