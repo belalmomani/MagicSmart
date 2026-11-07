@@ -31,6 +31,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.magicsmart.core.adb.AdbConnectResult
 import com.magicsmart.core.adb.AdbConnection
+import com.magicsmart.core.adb.DangerWords
 import com.magicsmart.core.adb.AdbInstall
 import com.magicsmart.core.adb.AdbRemoteSession
 import com.magicsmart.core.adb.InstallResult
@@ -683,13 +684,15 @@ private fun AdbShellScreen(onBack: () -> Unit) {
     }
 
     pending?.let { cmd ->
+        val danger = DangerWords.warn(cmd)
         AlertDialog(
             onDismissRequest = { pending = null },
-            title = { Text("تأكيد تنفيذ أمر ADB / Confirm ADB command") },
+            title = { Text(if (danger != null) "⚠️ تحذير: أمر حسّاس / Warning: sensitive command" else "تأكيد تنفيذ أمر ADB / Confirm ADB command") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("سيُنفَّذ هذا الأمر على التلفاز عبر ADB shell:")
                     Text(cmd, fontWeight = FontWeight.Bold)
+                    danger?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color(0xFFEF5350), fontWeight = FontWeight.Bold) }
                     Text(
                         "غير مُختبر بعد على جهاز حقيقي؛ أمر قد يُغيّر النظام يحتاج حذراً منك. / Not yet tested on a real device; a command that can change the system needs your own caution.",
                         style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFB74D)
