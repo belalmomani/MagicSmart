@@ -1149,45 +1149,30 @@ private fun AdbRemoteScreen(onBack: () -> Unit) {
                 }
             }
             if (session != null) {
+                Text(
+                    "محاكاة بصرية لريموت MAGIC الأصلي بترتيب أزراره نفسه. الأزرار الرمادية الباهتة خاصة بهذا الطراز ولا كود قياسي لها في Android، فتبقى معطَّلة بدل تخمين وظيفتها.\n" +
+                        "A visual replica of the original MAGIC remote's layout. The faded grey buttons are model-specific with no standard Android code, so they stay disabled rather than guessing.",
+                    style = MaterialTheme.typography.bodySmall, color = Color.Gray
+                )
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        RemoteButton("▲") { press(TvKey.UP, "أعلى / Up") }
-                        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                            RemoteButton("◀") { press(TvKey.LEFT, "يسار / Left") }
-                            RemoteButton("OK") { press(TvKey.SELECT, "تحديد / OK") }
-                            RemoteButton("▶") { press(TvKey.RIGHT, "يمين / Right") }
-                        }
-                        RemoteButton("▼") { press(TvKey.DOWN, "أسفل / Down") }
+                        // الصف العلوي: الطاقة وكتم الصوت
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            RemoteButton("رجوع\nBack", wide = true) { press(TvKey.BACK, "رجوع / Back") }
-                            RemoteButton("الرئيسية\nHome", wide = true) { press(TvKey.HOME, "الرئيسية / Home") }
+                            RemoteButton("⏻\nPower", wide = true) { press(TvKey.POWER, "الطاقة / Power") }
+                            RemoteButton("🔇\nMute", wide = true) { press(TvKey.MUTE, "كتم / Mute") }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            RemoteButton("القائمة\nMenu", wide = true) { press(TvKey.MENU, "القائمة / Menu") }
-                            RemoteButton("تشغيل/إيقاف\nPlay", wide = true) { press(TvKey.PLAY_PAUSE, "تشغيل/إيقاف / Play-pause") }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            RemoteButton("صوت-\nVol-", wide = true) { press(TvKey.VOLUME_DOWN, "خفض الصوت / Volume down") }
-                            RemoteButton("كتم\nMute", wide = true) { press(TvKey.MUTE, "كتم / Mute") }
-                            RemoteButton("صوت+\nVol+", wide = true) { press(TvKey.VOLUME_UP, "رفع الصوت / Volume up") }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            RemoteButton("قناة+\nCH+", wide = true) { press(TvKey.CHANNEL_UP, "قناة+ / Channel up") }
-                            RemoteButton("قناة-\nCH-", wide = true) { press(TvKey.CHANNEL_DOWN, "قناة- / Channel down") }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            RemoteButton("المصدر\nSource", wide = true) { press(TvKey.TV_INPUT, "المصدر / Source") }
-                            RemoteButton("الإعدادات\nSettings", wide = true) { press(TvKey.SETTINGS, "الإعدادات / Settings") }
-                        }
-                        Text("التشغيل / Playback", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        // صف أزرار خاصة بالطراز (معطَّلة عمداً)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RemoteButton("◁◁") { press(TvKey.PREVIOUS, "السابق / Previous") }
-                            RemoteButton("⏪") { press(TvKey.REWIND, "إرجاع / Rewind") }
-                            RemoteButton("⏹") { press(TvKey.STOP, "إيقاف / Stop") }
-                            RemoteButton("⏩") { press(TvKey.FAST_FORWARD, "تقديم / Fast-forward") }
-                            RemoteButton("▷▷") { press(TvKey.NEXT, "التالي / Next") }
+                            DisabledRemoteButton("P.MODE"); DisabledRemoteButton("S.MODE"); DisabledRemoteButton("ASPECT")
                         }
-                        Text("الأرقام / Numbers", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            DisabledRemoteButton("PC"); DisabledRemoteButton("SLEEP"); DisabledRemoteButton("AV")
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            DisabledRemoteButton("TV"); DisabledRemoteButton("AUDIO"); DisabledRemoteButton("⇄")
+                        }
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                        // لوحة الأرقام (مطابقة لترتيب الريموت: 1-9 ثم FAV/0/تكرار)
                         for (row in 0..2) {
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 for (col in 1..3) {
@@ -1196,19 +1181,74 @@ private fun AdbRemoteScreen(onBack: () -> Unit) {
                                 }
                             }
                         }
-                        RemoteButton("0") { press(TvKey.NUM_0, "رقم 0 / Number 0") }
-                        Text("أزرار ملوَّنة / Color keys", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            DisabledRemoteButton("FAV")
+                            RemoteButton("0") { press(TvKey.NUM_0, "رقم 0 / Number 0") }
+                            DisabledRemoteButton("⟲")
+                        }
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                        // لوحة الاتجاهات الدائرية، مطابقة لمكان SOURCE/DISPLAY وMENU/EXIT حول الدائرة في الأصلي
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(onClick = { press(TvKey.TV_INPUT, "المصدر / Source") }) { Text("SOURCE", style = MaterialTheme.typography.labelSmall) }
+                            Text("DISPLAY", style = MaterialTheme.typography.labelSmall, color = Color.Gray, modifier = Modifier.padding(8.dp))
+                        }
+                        RemoteButton("▲") { press(TvKey.UP, "أعلى / Up") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                            RemoteButton("◀") { press(TvKey.LEFT, "يسار / Left") }
+                            RemoteButton("OK") { press(TvKey.SELECT, "تحديد / OK") }
+                            RemoteButton("▶") { press(TvKey.RIGHT, "يمين / Right") }
+                        }
+                        RemoteButton("▼") { press(TvKey.DOWN, "أسفل / Down") }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(onClick = { press(TvKey.MENU, "القائمة / Menu") }) { Text("MENU", style = MaterialTheme.typography.labelSmall) }
+                            TextButton(onClick = { press(TvKey.BACK, "خروج / Exit") }) { Text("EXIT", style = MaterialTheme.typography.labelSmall) }
+                        }
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                        // صف CH / HOME / VOL، مطابق لمكانه في الأصلي
+                        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                RemoteButton("CH\n▲", wide = true) { press(TvKey.CHANNEL_UP, "قناة+ / Channel up") }
+                                RemoteButton("CH\n▼", wide = true) { press(TvKey.CHANNEL_DOWN, "قناة- / Channel down") }
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                RemoteButton("🏠\nHome", wide = true) { press(TvKey.HOME, "الرئيسية / Home") }
+                                DisabledRemoteButton("🖱", wide = true)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                RemoteButton("VOL\n+", wide = true) { press(TvKey.VOLUME_UP, "رفع الصوت / Volume up") }
+                                RemoteButton("VOL\n−", wide = true) { press(TvKey.VOLUME_DOWN, "خفض الصوت / Volume down") }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            DisabledRemoteButton("EPG"); DisabledRemoteButton("REC"); DisabledRemoteButton("REC.M")
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            DisabledRemoteButton("T.SHIFT")
+                            RemoteButton("إعدادات\nSETTING") { press(TvKey.SETTINGS, "الإعدادات / Settings") }
+                            DisabledRemoteButton("TV/RADIO")
+                        }
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                        // صف التشغيل، مطابق لترتيب أزرار الوسائط في الأصلي
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            RemoteButton("◁◁") { press(TvKey.PREVIOUS, "السابق / Previous") }
+                            RemoteButton("▷❚❚") { press(TvKey.PLAY_PAUSE, "تشغيل/إيقاف / Play-pause") }
+                            RemoteButton("▷▷") { press(TvKey.NEXT, "التالي / Next") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            RemoteButton("⏪") { press(TvKey.REWIND, "إرجاع / Rewind") }
+                            RemoteButton("⏹") { press(TvKey.STOP, "إيقاف / Stop") }
+                            RemoteButton("⏩") { press(TvKey.FAST_FORWARD, "تقديم / Fast-forward") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            DisabledRemoteButton("SUB.T"); DisabledRemoteButton("REPEAT"); DisabledRemoteButton("LANG")
+                        }
+                        // الأزرار الملوَّنة، بالترتيب نفسه في الأصلي
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             ColorButton(Color(0xFFE53935)) { press(TvKey.PROG_RED, "أحمر / Red") }
                             ColorButton(Color(0xFF43A047)) { press(TvKey.PROG_GREEN, "أخضر / Green") }
                             ColorButton(Color(0xFFFDD835)) { press(TvKey.PROG_YELLOW, "أصفر / Yellow") }
                             ColorButton(Color(0xFF1E88E5)) { press(TvKey.PROG_BLUE, "أزرق / Blue") }
                         }
-                        Text(
-                            "أزرار الجهاز الأصلي الخاصة (P.MODE, S.MODE, SLEEP, FAV, EPG, REC, T.SHIFT, AUDIO\u2026) لا تملك كوداً قياسياً في Android، فلم تُضَف تجنباً لتخمين خاطئ.\n" +
-                                "This remote's vendor-specific buttons have no standard Android key code, so they were left out rather than guessed.",
-                            style = MaterialTheme.typography.bodySmall, color = Color.Gray
-                        )
                     }
                 }
             }
@@ -1219,6 +1259,14 @@ private fun AdbRemoteScreen(onBack: () -> Unit) {
 @Composable
 private fun ColorButton(color: Color, onClick: () -> Unit) {
     OutlinedButton(onClick = onClick, modifier = Modifier.size(44.dp), colors = ButtonDefaults.outlinedButtonColors(containerColor = color)) {}
+}
+
+@Composable
+private fun DisabledRemoteButton(label: String, wide: Boolean = false) {
+    OutlinedButton(
+        onClick = {}, enabled = false,
+        modifier = if (wide) Modifier.width(100.dp).height(48.dp) else Modifier.size(56.dp)
+    ) { Text(label, fontSize = 10.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = Color.Gray) }
 }
 
 @Composable
