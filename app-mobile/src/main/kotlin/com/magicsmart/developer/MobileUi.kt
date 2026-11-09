@@ -654,7 +654,8 @@ private fun AdbShellScreen(onBack: () -> Unit) {
     val history = remember { mutableStateListOf<ShellEntry>() }
     val presets = listOf(
         "getprop ro.build.version.release", "dumpsys battery", "pm list packages -3",
-        "df -h", "cat /proc/meminfo", "settings get global adb_wifi_enabled"
+        "df -h", "cat /proc/meminfo", "settings get global adb_wifi_enabled",
+        "pm list packages | grep -iE \"update|ota\"; echo ---; getprop ro.build.version.incremental; getprop ro.build.date"
     )
 
     fun execute(cmd: String) {
