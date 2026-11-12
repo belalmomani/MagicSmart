@@ -65,6 +65,9 @@ fun MagicMobileApp() {
             var screen by remember { mutableStateOf(Screen.HOME) }
             var resultsEngine by remember { mutableStateOf<Engine?>(null) }
             BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
+            // يُحمَّل عنوان التلفاز المحفوظ مرة واحدة، ويُحفَظ تلقائياً كلما تغيّر في أي شاشة ADB
+            LaunchedEffect(Unit) { AdbTarget.load(context) }
+            LaunchedEffect(AdbTarget.host, AdbTarget.port) { AdbTarget.save(context) }
             when (screen) {
                 Screen.HOME -> HomeScreen(controller, { e -> resultsEngine = e; screen = Screen.RESULTS }, { screen = Screen.REPORTS }, { screen = Screen.LINK }, { screen = Screen.ASSIST }, { screen = Screen.SHELL }, { screen = Screen.DASHBOARD }, { screen = Screen.INSTALL }, { screen = Screen.REMOTE })
                 Screen.RESULTS -> ResultsScreen(controller, resultsEngine) { screen = Screen.HOME }
@@ -633,9 +636,22 @@ private fun AssistScreen(onBack: () -> Unit) {
     }
 }
 
+/** عنوان ومنفذ آخر تلفاز، مشترك بين شاشات ADB ومحفوظ محلياً ليبقى بعد إغلاق التطبيق. */
 private object AdbTarget {
     var host by mutableStateOf("")
     var port by mutableStateOf("5555")
+    private const val PREF = "adb_target"
+
+    fun load(ctx: Context) {
+        val sp = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+        host = sp.getString("host", "") ?: ""
+        port = sp.getString("port", "5555") ?: "5555"
+    }
+
+    fun save(ctx: Context) {
+        ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit()
+            .putString("host", host).putString("port", port).apply()
+    }
 }
 
 private data class ShellEntry(val command: String, val output: String, val ok: Boolean)
@@ -655,7 +671,8 @@ private fun AdbShellScreen(onBack: () -> Unit) {
     val presets = listOf(
         "getprop ro.build.version.release", "dumpsys battery", "pm list packages -3",
         "df -h", "cat /proc/meminfo", "settings get global adb_wifi_enabled",
-        "pm list packages | grep -iE \"update|ota\"; echo ---; getprop ro.build.version.incremental; getprop ro.build.date"
+        "pm list packages | grep -iE \"update|ota\"; echo ---; getprop ro.build.version.incremental; getprop ro.build.date",
+        "wm size", "ps -A | head -30", "logcat -d -t 200"
     )
 
     fun execute(cmd: String) {
@@ -784,7 +801,8 @@ private fun AdbDashboardScreen(onBack: () -> Unit) {
         "battery" to "dumpsys battery",
         "mem" to "cat /proc/meminfo",
         "storage" to "df -h /data",
-        "apps" to "pm list packages -3"
+        "apps" to "pm list packages -3",
+        "resolution" to "wm size"
     )
 
     fun parseBattery(s: String): String {
@@ -838,7 +856,8 @@ private fun AdbDashboardScreen(onBack: () -> Unit) {
                         DashField("البطارية / Battery", parseBattery(results["battery"].orEmpty())),
                         DashField("الذاكرة / Memory", parseMem(results["mem"].orEmpty())),
                         DashField("التخزين (/data) / Storage", parseStorage(results["storage"].orEmpty())),
-                        DashField("التطبيقات / Apps", parseApps(results["apps"].orEmpty()))
+                        DashField("التطبيقات / Apps", parseApps(results["apps"].orEmpty())),
+                        DashField("دقة الشاشة / Resolution", results["resolution"].orEmpty().substringAfter(": ").ifEmpty { "? / unknown" })
                     )
                     status = "تم التحديث. / Updated."
                 }
