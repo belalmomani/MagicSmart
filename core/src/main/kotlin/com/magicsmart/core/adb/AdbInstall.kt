@@ -55,45 +55,12 @@ object AdbInstall {
         }
     }
 
-    // مطابق لـ AdbConnection.handshake لكن متاح هنا أيضاً لأن المصافحة تُعاد قبل الرفع والتثبيت في نفس الاتصال
-    private fun handshakeShared(ctx: Context, inp: DataInputStream, out: DataOutputStream, kp: java.security.KeyPair): AdbConnectResult {
-        AdbMessage(AdbMessage.A_CNXN, AdbMessage.A_VERSION, AdbMessage.MAX_PAYLOAD, cstr("host::")).write(out)
-        var triedSig = false; var triedPub = false
-        repeat(6) {
-            val msg = AdbMessage.read(inp)
-            when (msg.command) {
-                AdbMessage.A_CNXN -> return AdbConnectResult.Connected
-                AdbMessage.A_AUTH -> {
-                    if (msg.arg0 != AdbMessage.AUTH_TOKEN) return AdbConnectResult.Failed("رسالة AUTH غير متوقعة")
-                    if (!triedSig) { triedSig = true; AdbMessage(AdbMessage.A_AUTH, AdbMessage.AUTH_SIGNATURE, 0, AdbKey.sign(kp.private, msg.data)).write(out) }
-                    else if (!triedPub) { triedPub = true; AdbMessage(AdbMessage.A_AUTH, AdbMessage.AUTH_RSAPUBLICKEY, 0, cstr(AdbKey.wirePublicKey(ctx, kp.public))).write(out); return AdbConnectResult.AwaitingDeviceApproval }
-                    else return AdbConnectResult.Failed("رفض الجهاز المفتاح")
-                }
-                else -> return AdbConnectResult.Failed("رسالة غير متوقعة أثناء المصادقة")
-            }
-        }
-        return AdbConnectResult.Failed("انتهت محاولات المصادقة")
-    }
+    // موحَّدة في AdbCore (كانت مكرَّرة هنا وفي AdbConnection وAdbRemote)
+    private fun handshakeShared(ctx: Context, inp: DataInputStream, out: DataOutputStream, kp: java.security.KeyPair): AdbConnectResult =
+        AdbCore.handshake(ctx, inp, out, kp)
 
-    /** ينفّذ أمر shell على اتصال مُصادَق بالفعل (دون إعادة المصافحة). */
-    private fun execOnOpenSocket(inp: DataInputStream, out: DataOutputStream, command: String): String {
-        val localId = Random.nextInt(1, Int.MAX_VALUE)
-        AdbMessage(AdbMessage.A_OPEN, localId, 0, cstr("shell:$command")).write(out)
-        var remoteId = 0
-        val sb = StringBuilder()
-        while (true) {
-            val msg = AdbMessage.read(inp)
-            when (msg.command) {
-                AdbMessage.A_OKAY -> remoteId = msg.arg0
-                AdbMessage.A_WRTE -> {
-                    sb.append(String(msg.data, Charsets.UTF_8))
-                    if (remoteId == 0) remoteId = msg.arg0
-                    AdbMessage(AdbMessage.A_OKAY, localId, remoteId, ByteArray(0)).write(out)
-                }
-                AdbMessage.A_CLSE -> { AdbMessage(AdbMessage.A_CLSE, localId, msg.arg0, ByteArray(0)).write(out); return sb.toString() }
-            }
-        }
-    }
+    private fun execOnOpenSocket(inp: DataInputStream, out: DataOutputStream, command: String): String =
+        AdbCore.execShell(inp, out, command)
 
     /** رفع بايتات عبر خدمة sync: (SEND/DATA/DONE)، وفق بروتوكول adb sync الموثَّق. */
     private fun syncPush(inp: DataInputStream, out: DataOutputStream, data: ByteArray, remotePath: String): Pair<Boolean, String> {

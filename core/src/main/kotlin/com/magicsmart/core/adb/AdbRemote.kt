@@ -12,7 +12,6 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
-import kotlin.random.Random
 
 /** أكواد أزرار الريموت القياسية في Android (android.view.KeyEvent)، كافية لتصفّح واجهة تلفاز. */
 object TvKey {
@@ -69,20 +68,7 @@ class AdbRemoteSession private constructor(
     }
 
     private fun execShellIgnoringOutput(command: String) {
-        val localId = Random.nextInt(1, Int.MAX_VALUE)
-        AdbMessage(AdbMessage.A_OPEN, localId, 0, cstr("shell:$command")).write(out)
-        var remoteId = 0
-        while (true) {
-            val msg = AdbMessage.read(inp)
-            when (msg.command) {
-                AdbMessage.A_OKAY -> remoteId = msg.arg0
-                AdbMessage.A_WRTE -> {
-                    if (remoteId == 0) remoteId = msg.arg0
-                    AdbMessage(AdbMessage.A_OKAY, localId, remoteId, ByteArray(0)).write(out)
-                }
-                AdbMessage.A_CLSE -> { AdbMessage(AdbMessage.A_CLSE, localId, msg.arg0, ByteArray(0)).write(out); return }
-            }
-        }
+        AdbCore.execShell(inp, out, command) // الناتج غير مهم هنا، فقط التنفيذ
     }
 
     fun close() { try { socket.close() } catch (e: Exception) { } }
@@ -98,7 +84,7 @@ class AdbRemoteSession private constructor(
                         val inp = DataInputStream(BufferedInputStream(sock.getInputStream()))
                         val out = DataOutputStream(BufferedOutputStream(sock.getOutputStream()))
                         val kp = AdbKey.keyPair(ctx)
-                        val result = handshake(ctx, inp, out, kp)
+                        val result = AdbCore.handshake(ctx, inp, out, kp)
                         if (result == AdbConnectResult.Connected) result to AdbRemoteSession(sock, inp, out)
                         else { sock.close(); result to null }
                     } catch (e: Exception) {
@@ -107,24 +93,5 @@ class AdbRemoteSession private constructor(
                     }
                 }
             }
-
-        private fun handshake(ctx: Context, inp: DataInputStream, out: DataOutputStream, kp: java.security.KeyPair): AdbConnectResult {
-            AdbMessage(AdbMessage.A_CNXN, AdbMessage.A_VERSION, AdbMessage.MAX_PAYLOAD, cstr("host::")).write(out)
-            var triedSig = false; var triedPub = false
-            repeat(6) {
-                val msg = AdbMessage.read(inp)
-                when (msg.command) {
-                    AdbMessage.A_CNXN -> return AdbConnectResult.Connected
-                    AdbMessage.A_AUTH -> {
-                        if (msg.arg0 != AdbMessage.AUTH_TOKEN) return AdbConnectResult.Failed("رسالة AUTH غير متوقعة")
-                        if (!triedSig) { triedSig = true; AdbMessage(AdbMessage.A_AUTH, AdbMessage.AUTH_SIGNATURE, 0, AdbKey.sign(kp.private, msg.data)).write(out) }
-                        else if (!triedPub) { triedPub = true; AdbMessage(AdbMessage.A_AUTH, AdbMessage.AUTH_RSAPUBLICKEY, 0, cstr(AdbKey.wirePublicKey(ctx, kp.public))).write(out); return AdbConnectResult.AwaitingDeviceApproval }
-                        else return AdbConnectResult.Failed("رفض الجهاز المفتاح")
-                    }
-                    else -> return AdbConnectResult.Failed("رسالة غير متوقعة أثناء المصادقة")
-                }
-            }
-            return AdbConnectResult.Failed("انتهت محاولات المصادقة")
-        }
     }
 }

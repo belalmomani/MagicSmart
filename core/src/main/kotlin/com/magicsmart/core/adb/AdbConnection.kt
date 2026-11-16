@@ -48,61 +48,9 @@ object AdbConnection {
         }
     }
 
-    private fun sendCnxn(out: DataOutputStream) {
-        AdbMessage(AdbMessage.A_CNXN, AdbMessage.A_VERSION, AdbMessage.MAX_PAYLOAD, cstr("host::")).write(out)
-    }
+    private fun handshake(ctx: Context, inp: DataInputStream, out: DataOutputStream, kp: KeyPair): AdbConnectResult =
+        AdbCore.handshake(ctx, inp, out, kp)
 
-    private fun handshake(ctx: Context, inp: DataInputStream, out: DataOutputStream, kp: KeyPair): AdbConnectResult {
-        sendCnxn(out)
-        var triedSignature = false
-        var triedPublicKey = false
-        repeat(6) {
-            val msg = AdbMessage.read(inp)
-            when (msg.command) {
-                AdbMessage.A_CNXN -> return AdbConnectResult.Connected
-                AdbMessage.A_AUTH -> {
-                    if (msg.arg0 != AdbMessage.AUTH_TOKEN) return AdbConnectResult.Failed("رسالة AUTH غير متوقعة")
-                    if (!triedSignature) {
-                        triedSignature = true
-                        val sig = AdbKey.sign(kp.private, msg.data)
-                        AdbMessage(AdbMessage.A_AUTH, AdbMessage.AUTH_SIGNATURE, 0, sig).write(out)
-                    } else if (!triedPublicKey) {
-                        triedPublicKey = true
-                        val pub = cstr(AdbKey.wirePublicKey(ctx, kp.public))
-                        AdbMessage(AdbMessage.A_AUTH, AdbMessage.AUTH_RSAPUBLICKEY, 0, pub).write(out)
-                        return AdbConnectResult.AwaitingDeviceApproval
-                    } else {
-                        return AdbConnectResult.Failed("رفض الجهاز المفتاح")
-                    }
-                }
-                else -> return AdbConnectResult.Failed("رسالة غير متوقعة أثناء المصادقة")
-            }
-        }
-        return AdbConnectResult.Failed("انتهت محاولات المصادقة")
-    }
-
-    private fun runShell(inp: DataInputStream, out: DataOutputStream, command: String): AdbExecResult {
-        val localId = Random.nextInt(1, Int.MAX_VALUE)
-        AdbMessage(AdbMessage.A_OPEN, localId, 0, cstr("shell:$command")).write(out)
-        var remoteId = 0
-        val sb = StringBuilder()
-        var opened = false
-        while (true) {
-            val msg = AdbMessage.read(inp)
-            when (msg.command) {
-                AdbMessage.A_OKAY -> { remoteId = msg.arg0; opened = true }
-                AdbMessage.A_WRTE -> {
-                    if (msg.arg1 != localId) continue
-                    sb.append(String(msg.data, Charsets.UTF_8))
-                    if (remoteId == 0) remoteId = msg.arg0
-                    AdbMessage(AdbMessage.A_OKAY, localId, remoteId, ByteArray(0)).write(out)
-                }
-                AdbMessage.A_CLSE -> {
-                    if (opened) AdbMessage(AdbMessage.A_CLSE, localId, msg.arg0, ByteArray(0)).write(out)
-                    return AdbExecResult(sb.toString(), true)
-                }
-                else -> { /* تجاهل */ }
-            }
-        }
-    }
+    private fun runShell(inp: DataInputStream, out: DataOutputStream, command: String): AdbExecResult =
+        AdbExecResult(AdbCore.execShell(inp, out, command), true)
 }

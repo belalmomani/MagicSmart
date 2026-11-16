@@ -54,7 +54,7 @@ import com.magicsmart.core.report.ReportBuilder
 import com.magicsmart.core.report.StoredResult
 import com.magicsmart.core.report.StoredRun
 
-private enum class Screen { HOME, RESULTS, REPORTS, LINK, ASSIST, SHELL, DASHBOARD, INSTALL, REMOTE }
+private enum class Screen { HOME, RESULTS, REPORTS, LINK, ASSIST, SHELL, DASHBOARD, INSTALL, REMOTE, OVERLAY }
 
 @Composable
 fun MagicMobileApp() {
@@ -69,7 +69,7 @@ fun MagicMobileApp() {
             LaunchedEffect(Unit) { AdbTarget.load(context) }
             LaunchedEffect(AdbTarget.host, AdbTarget.port) { AdbTarget.save(context) }
             when (screen) {
-                Screen.HOME -> HomeScreen(controller, { e -> resultsEngine = e; screen = Screen.RESULTS }, { screen = Screen.REPORTS }, { screen = Screen.LINK }, { screen = Screen.ASSIST }, { screen = Screen.SHELL }, { screen = Screen.DASHBOARD }, { screen = Screen.INSTALL }, { screen = Screen.REMOTE })
+                Screen.HOME -> HomeScreen(controller, { e -> resultsEngine = e; screen = Screen.RESULTS }, { screen = Screen.REPORTS }, { screen = Screen.LINK }, { screen = Screen.ASSIST }, { screen = Screen.SHELL }, { screen = Screen.DASHBOARD }, { screen = Screen.INSTALL }, { screen = Screen.REMOTE }, { screen = Screen.OVERLAY })
                 Screen.RESULTS -> ResultsScreen(controller, resultsEngine) { screen = Screen.HOME }
                 Screen.REPORTS -> ReportsScreen(controller) { screen = Screen.HOME }
                 Screen.LINK -> LinkScreen { screen = Screen.HOME }
@@ -78,6 +78,7 @@ fun MagicMobileApp() {
                 Screen.DASHBOARD -> AdbDashboardScreen { screen = Screen.HOME }
                 Screen.INSTALL -> AdbInstallScreen { screen = Screen.HOME }
                 Screen.REMOTE -> AdbRemoteScreen { screen = Screen.HOME }
+                Screen.OVERLAY -> AdbOverlayScreen { screen = Screen.HOME }
             }
         }
     }
@@ -85,7 +86,7 @@ fun MagicMobileApp() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeScreen(controller: ScanController, onOpenResults: (Engine?) -> Unit, onOpenReports: () -> Unit, onOpenLink: () -> Unit, onOpenAssist: () -> Unit, onOpenShell: () -> Unit, onOpenDashboard: () -> Unit, onOpenInstall: () -> Unit, onOpenRemote: () -> Unit) {
+private fun HomeScreen(controller: ScanController, onOpenResults: (Engine?) -> Unit, onOpenReports: () -> Unit, onOpenLink: () -> Unit, onOpenAssist: () -> Unit, onOpenShell: () -> Unit, onOpenDashboard: () -> Unit, onOpenInstall: () -> Unit, onOpenRemote: () -> Unit, onOpenOverlay: () -> Unit) {
     val context = LocalContext.current
     var snap by remember { mutableStateOf(DeviceInspector.inspect(context)) }
     val results by controller.results.collectAsState()
@@ -188,6 +189,9 @@ private fun HomeScreen(controller: ScanController, onOpenResults: (Engine?) -> U
                         }
                         OutlinedButton(onClick = onOpenRemote, modifier = Modifier.fillMaxWidth()) {
                             Text("ريموت كنترول / Remote control")
+                        }
+                        OutlinedButton(onClick = onOpenOverlay, modifier = Modifier.fillMaxWidth()) {
+                            Text("إدارة الظهور فوق التطبيقات / Manage overlay permission")
                         }
                     }
                 }
@@ -770,9 +774,17 @@ private fun AdbShellScreen(onBack: () -> Unit) {
             item { Text("السجل / History", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
             items(history) { e ->
                 Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("$ ${e.command}", fontWeight = FontWeight.Bold, color = if (e.ok) Color.Unspecified else Color(0xFFEF5350))
-                        Text(e.output, style = MaterialTheme.typography.bodySmall)
+                    // نص الأمر والمخرجات إنجليزي دائماً (shell)؛ نفرض اتجاهه LTR كي لا يُعاد ترتيبه
+                    // بصرياً بسبب اتجاه RTL العام للتطبيق (وهذا ما جعل "$" يظهر في غير مكانه).
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                "$ ${e.command}", fontWeight = FontWeight.Bold,
+                                color = if (e.ok) Color.Unspecified else Color(0xFFEF5350),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Left
+                            )
+                            Text(e.output, style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Left)
+                        }
                     }
                 }
             }
@@ -1295,4 +1307,143 @@ private fun RemoteButton(label: String, wide: Boolean = false, onClick: () -> Un
         onClick = onClick,
         modifier = if (wide) Modifier.width(120.dp).height(56.dp) else Modifier.size(64.dp)
     ) { Text(label, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+}
+
+private data class OverlayApp(val pkg: String, val state: String?)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AdbOverlayScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var host by AdbTarget::host
+    var port by AdbTarget::port
+    var busy by remember { mutableStateOf(false) }
+    var status by remember {
+        mutableStateOf(
+            "يدير صلاحية «الظهور فوق التطبيقات الأخرى» (SYSTEM_ALERT_WINDOW) لكل تطبيق عبر ADB، بدل فتح إعدادات كل تطبيق يدوياً.\n" +
+                "Manages the \"display over other apps\" permission for each app via ADB, instead of opening each app's settings manually."
+        )
+    }
+    var apps by remember { mutableStateOf<List<OverlayApp>>(emptyList()) }
+    var pendingAction by remember { mutableStateOf<Pair<String, Boolean>?>(null) } // package to "allow?"
+
+    fun refreshList() {
+        val p = port.toIntOrNull()
+        if (host.isBlank() || p == null) { status = "أدخل عنواناً ومنفذاً صحيحين أولاً. / Enter a valid address/port first."; return }
+        busy = true
+        scope.launch {
+            try {
+                val (conn, exec) = AdbConnection.connectAndExec(context, host.trim(), p, "pm list packages -3")
+                when (conn) {
+                    is AdbConnectResult.Connected -> {
+                        apps = exec?.output.orEmpty().lines()
+                            .mapNotNull { it.removePrefix("package:").trim().takeIf { s -> s.isNotEmpty() } }
+                            .sorted().map { OverlayApp(it, null) }
+                        status = "${apps.size} تطبيقاً. اضغط «فحص» على أي تطبيق لمعرفة حالته. / ${apps.size} apps. Tap Check on any app for its state."
+                    }
+                    is AdbConnectResult.AwaitingDeviceApproval -> status = "انتظر الموافقة على شاشة التلفاز ثم أعد المحاولة. / Wait for approval on the TV, then retry."
+                    is AdbConnectResult.Failed -> status = "فشل / Failed: ${conn.reason}"
+                }
+            } catch (e: Exception) { status = "${e.javaClass.simpleName}: ${e.message}" }
+            busy = false
+        }
+    }
+
+    fun checkState(pkg: String) {
+        val p = port.toIntOrNull() ?: return
+        busy = true
+        scope.launch {
+            try {
+                val (conn, exec) = AdbConnection.connectAndExec(context, host.trim(), p, "appops get $pkg SYSTEM_ALERT_WINDOW")
+                val out = exec?.output?.trim().orEmpty()
+                val state = when {
+                    out.contains("allow", true) -> "allow"
+                    out.contains("ignore", true) -> "ignore"
+                    out.contains("deny", true) -> "deny"
+                    out.contains("default", true) -> "default"
+                    else -> out.ifEmpty { "? / unknown" }
+                }
+                if (conn is AdbConnectResult.Connected) apps = apps.map { if (it.pkg == pkg) it.copy(state = state) else it }
+                else if (conn is AdbConnectResult.AwaitingDeviceApproval) status = "انتظر الموافقة على شاشة التلفاز. / Wait for approval on the TV."
+            } catch (e: Exception) { status = "${e.javaClass.simpleName}: ${e.message}" }
+            busy = false
+        }
+    }
+
+    fun applyChange(pkg: String, allow: Boolean) {
+        val p = port.toIntOrNull() ?: return
+        busy = true
+        scope.launch {
+            try {
+                val (conn, exec) = AdbConnection.connectAndExec(
+                    context, host.trim(), p, "appops set $pkg SYSTEM_ALERT_WINDOW ${if (allow) "allow" else "ignore"}"
+                )
+                when (conn) {
+                    is AdbConnectResult.Connected -> {
+                        status = "تم. / Done."
+                        checkState(pkg)
+                    }
+                    is AdbConnectResult.AwaitingDeviceApproval -> status = "انتظر الموافقة على شاشة التلفاز. / Wait for approval on the TV."
+                    is AdbConnectResult.Failed -> status = "فشل / Failed: ${conn.reason}"
+                }
+            } catch (e: Exception) { status = "${e.javaClass.simpleName}: ${e.message}" }
+            busy = false
+        }
+    }
+
+    pendingAction?.let { (pkg, allow) ->
+        AlertDialog(
+            onDismissRequest = { pendingAction = null },
+            title = { Text(if (allow) "السماح بالظهور العائم / Allow overlay" else "منع الظهور العائم / Deny overlay") },
+            text = { Text("سيُنفَّذ: appops set $pkg SYSTEM_ALERT_WINDOW ${if (allow) "allow" else "ignore"}") },
+            confirmButton = { TextButton(onClick = { pendingAction = null; applyChange(pkg, allow) }) { Text("أوافق وأنفّذ / I agree, run it") } },
+            dismissButton = { TextButton(onClick = { pendingAction = null }) { Text("إلغاء / Cancel") } }
+        )
+    }
+
+    Scaffold(topBar = {
+        CenterAlignedTopAppBar(
+            title = { Text("الظهور فوق التطبيقات / Overlay permission") },
+            navigationIcon = { TextButton(onClick = onBack) { Text("رجوع / Back") } }
+        )
+    }) { pad ->
+        LazyColumn(
+            modifier = Modifier.padding(pad).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(vertical = 12.dp)
+        ) {
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(value = host, onValueChange = { host = it }, label = { Text("عنوان التلفاز / TV address") }, singleLine = true, modifier = Modifier.weight(2f))
+                            OutlinedTextField(value = port, onValueChange = { port = it }, label = { Text("منفذ / Port") }, singleLine = true, modifier = Modifier.weight(1f))
+                        }
+                        Button(onClick = { refreshList() }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (busy) "جارٍ العمل… / Working…" else "تحديث قائمة التطبيقات / Refresh app list")
+                        }
+                        Text(status, style = MaterialTheme.typography.bodySmall, color = Color(0xFF81D4FA))
+                    }
+                }
+            }
+            items(apps, key = { it.pkg }) { app ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(app.pkg, fontWeight = FontWeight.Bold)
+                        Text(
+                            "الحالة / State: " + (app.state ?: "غير معروفة — اضغط «فحص» / unknown — tap Check"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when (app.state) { "allow" -> Color(0xFF4CAF50); "deny", "ignore" -> Color(0xFFEF5350); else -> Color.Gray }
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { checkState(app.pkg) }, enabled = !busy) { Text("فحص / Check") }
+                            Button(onClick = { pendingAction = app.pkg to true }, enabled = !busy) { Text("سماح / Allow") }
+                            OutlinedButton(onClick = { pendingAction = app.pkg to false }, enabled = !busy) { Text("منع / Deny") }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
