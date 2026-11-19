@@ -3,7 +3,6 @@ package com.magicsmart.core.engine
 import android.content.ComponentName
 import android.content.Context
 import android.os.UserManager
-import android.provider.Settings
 import com.magicsmart.core.ResultStatus
 import com.magicsmart.core.SettingState
 
@@ -23,70 +22,71 @@ object DeveloperOptionsTests {
 
     private val base = listOf(
         TestDefinition(
-            id = "DEV-001", name = "قراءة حالة Developer Options",
-            description = "قراءة development_settings_enabled من Settings.Global",
+            id = "DEV-001", name = "قراءة حالة Developer Options / Read developer-options state",
+            description = "قراءة development_settings_enabled من Settings.Global / Read development_settings_enabled from Settings.Global",
             engine = Engine.DEVELOPER_OPTIONS, method = "Settings.Global.getInt",
-            expected = "قراءة القيمة دون صلاحيات"
+            expected = "قراءة القيمة دون صلاحيات / Reading the value needs no permission"
         ) { tc ->
             val r = tc.snapshot.developerOptions
             when (r.state) {
                 SettingState.ENABLED, SettingState.DISABLED ->
-                    TestOutcome(ResultStatus.SUCCESS, "الحالة: ${r.state.arabic}")
+                    TestOutcome(ResultStatus.SUCCESS, "الحالة / State: ${r.state.arabic}")
                 else -> TestOutcome(ResultStatus.UNKNOWN, r.state.arabic, r.note)
             }
         },
         TestDefinition(
             id = "DEV-002", name = "مسار APPLICATION_DEVELOPMENT_SETTINGS",
-            description = "هل يوجد نشاط يعالج المسار الرسمي لصفحة المطوّر؟",
+            description = "هل يوجد نشاط يعالج المسار الرسمي لصفحة المطوّر؟ / Is there an activity handling the official developer-page path?",
             engine = Engine.DEVELOPER_OPTIONS, method = "PackageManager.resolveActivity",
-            expected = "وجود نشاط يعالج المسار",
+            expected = "وجود نشاط يعالج المسار / An activity handling the path exists",
             launch = LaunchSpec(action = DEV_ACTION)
         ) { tc ->
             val p = Probes.probeAction(tc, DEV_ACTION)
             if (p.status == ResultStatus.SUCCESS && p.actual.contains("Disabled")) TestOutcome(
                 ResultStatus.USER_ACTION_REQUIRED, p.actual,
-                "المسار موجود لكنه يقود إلى صفحة «خيارات المطوّر غير مفعّلة»",
-                "فعّل خيارات المطوّر أولاً (DEV-010) ثم أعد الفحص"
+                "المسار موجود لكنه يقود إلى صفحة «خيارات المطوّر غير مفعّلة» / The path exists but leads to a \"developer options disabled\" page",
+                "فعّل خيارات المطوّر أولاً (DEV-010) ثم أعد الفحص / Enable developer options first (DEV-010), then re-scan"
             ) else p
         },
         TestDefinition(
-            id = "DEV-010", name = "مسار تفعيل Developer Options عبر رقم البنية",
-            description = "التفعيل الرسمي: الضغط 7 مرات على رقم البنية في معلومات الجهاز",
-            engine = Engine.DEVELOPER_OPTIONS, method = "قراءة الحالة + resolveActivity لصفحة معلومات الجهاز",
-            expected = "الخيارات مفعّلة، أو صفحة معلومات الجهاز متاحة لتفعيلها يدوياً",
+            id = "DEV-010", name = "مسار تفعيل Developer Options عبر رقم البنية / Build-number activation path",
+            description = "التفعيل الرسمي: الضغط 7 مرات على رقم البنية في معلومات الجهاز / The official method: tapping Build number 7 times in About device",
+            engine = Engine.DEVELOPER_OPTIONS, method = "قراءة الحالة + resolveActivity لصفحة معلومات الجهاز / Read state + resolveActivity for the About device page",
+            expected = "الخيارات مفعّلة، أو صفحة معلومات الجهاز متاحة لتفعيلها يدوياً / Options enabled, or the About device page is available to enable it manually",
             launch = LaunchSpec(action = DEVICE_INFO)
         ) { tc ->
             if (tc.snapshot.developerOptions.state == SettingState.ENABLED) {
-                TestOutcome(ResultStatus.SUCCESS, "Developer Options مفعّلة مسبقاً")
+                TestOutcome(ResultStatus.SUCCESS, "Developer Options مفعّلة مسبقاً / Already enabled")
             } else {
                 val p = Probes.probeAction(tc, DEVICE_INFO)
                 if (p.status == ResultStatus.SUCCESS) TestOutcome(
-                    ResultStatus.USER_ACTION_REQUIRED, "الخيارات غير مفعّلة وصفحة معلومات الجهاز متاحة",
-                    null, "افتح معلومات الجهاز واضغط على رقم البنية (Build number) 7 مرات"
-                ) else TestOutcome(ResultStatus.UNSUPPORTED, "صفحة معلومات الجهاز غير متاحة", p.failureReason, p.nextAction)
+                    ResultStatus.USER_ACTION_REQUIRED, "الخيارات غير مفعّلة وصفحة معلومات الجهاز متاحة / Options are off and the About device page is available",
+                    null, "افتح معلومات الجهاز واضغط على رقم البنية (Build number) 7 مرات / Open About device and tap Build number 7 times"
+                ) else TestOutcome(ResultStatus.UNSUPPORTED, "صفحة معلومات الجهاز غير متاحة / About device page unavailable", p.failureReason, p.nextAction)
             }
         },
         TestDefinition(
-            id = "DEV-012", name = "قيود سياسة تعطيل ميزات التصحيح",
-            description = "هل يمنع النظام أو سياسة الجهاز ميزات التصحيح (no_debugging_features)؟",
+            id = "DEV-012", name = "قيود سياسة تعطيل ميزات التصحيح / Debugging-features policy restriction",
+            description = "هل يمنع النظام أو سياسة الجهاز ميزات التصحيح (no_debugging_features)؟ / Does system/device policy block debugging features (no_debugging_features)?",
             engine = Engine.DEVELOPER_OPTIONS, method = "UserManager.hasUserRestriction",
-            expected = "عدم وجود قيد"
+            expected = "عدم وجود قيد / No restriction present"
         ) { tc ->
             val um = tc.context.getSystemService(Context.USER_SERVICE) as UserManager
             if (um.hasUserRestriction(UserManager.DISALLOW_DEBUGGING_FEATURES)) TestOutcome(
-                ResultStatus.BLOCKED, "قيد DISALLOW_DEBUGGING_FEATURES مفعّل",
-                "سياسة الجهاز تمنع ميزات التصحيح", "يزيل القيد مسؤول الجهاز فقط"
-            ) else TestOutcome(ResultStatus.SUCCESS, "لا يوجد قيد على ميزات التصحيح")
+                ResultStatus.BLOCKED, "قيد DISALLOW_DEBUGGING_FEATURES مفعّل / The restriction is active",
+                "سياسة الجهاز تمنع ميزات التصحيح / Device policy blocks debugging features",
+                "يزيل القيد مسؤول الجهاز فقط / Only the device admin can remove it"
+            ) else TestOutcome(ResultStatus.SUCCESS, "لا يوجد قيد على ميزات التصحيح / No restriction on debugging features")
         }
     )
 
     private val componentTests = candidates.map { c ->
         val cn = ComponentName(c.pkg, c.cls)
         TestDefinition(
-            id = c.id, name = "مكوّن ${c.cls.substringAfterLast('.')}",
-            description = "فحص وجود المكوّن ${c.cls} وإمكانية تشغيله",
+            id = c.id, name = "مكوّن ${c.cls.substringAfterLast('.')} / Component ${c.cls.substringAfterLast('.')}",
+            description = "فحص وجود المكوّن ${c.cls} وإمكانية تشغيله / Check that component ${c.cls} exists and can be launched",
             engine = Engine.DEVELOPER_OPTIONS, method = "PackageManager.getActivityInfo",
-            expected = "مكوّن موجود ومصدَّر", target = c.target,
+            expected = "مكوّن موجود ومصدَّر / Component exists and is exported", target = c.target,
             launch = LaunchSpec(component = cn)
         ) { tc -> Probes.probeComponent(tc, cn) }
     }
